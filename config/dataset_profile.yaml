@@ -1,0 +1,22 @@
+seed: 42
+
+profiles:
+  small:
+    customers: 1000
+    service_orders: 10000
+    driver_partners: 500
+
+  medium:
+    customers: 10000
+    service_orders: 100000
+    driver_partners: 5000
+
+  large:
+    customers: 100000
+    service_orders: 1000000
+    driver_partners: 50000
+
+order_distribution:
+  mobility: 0.50
+  food: 0.35
+  delivery: 0.15

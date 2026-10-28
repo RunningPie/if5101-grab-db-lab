@@ -1,0 +1,17 @@
+[project]
+name = "if5101-grab-db-lab"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "RunningPie", email = "72292366+RunningPie@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+if5101-grab-db-lab = "if5101_grab_db_lab:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

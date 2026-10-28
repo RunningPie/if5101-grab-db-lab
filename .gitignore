@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+.vscode/
+.idea/
+.DS_Store
+*.fdb
+*.fbk
+*.backup
+results/*.csv
+results/*.json
