@@ -31,6 +31,58 @@ Update this file as the configuration evolves, but **DO NOT** put real passwords
 
 DBeaver may ask to install a JDBC driver on the first connection. Use **Test Connection** before saving. The Firebird database path is inside the Docker container; it is not a Windows path.
 
+## Python Development Workflow
+
+All contributors must use uv to manage Python dependencies and execute project scripts.
+
+### Setting Up the Environment
+
+After cloning the repository or pulling changes to its Python dependencies, run:
+
+```bash
+uv sync --locked
+```
+
+Use `uv run` to execute Python scripts and tests without manually activating the virtual environment.
+
+```bash
+uv run pytest
+```
+
+### Adding Dependencies
+
+If a new Python library is needed, add it through uv:
+
+```bash
+uv add faker
+```
+
+For development tools:
+
+```bash
+uv add --dev pytest
+```
+
+Commit both `pyproject.toml` and `uv.lock` in the same pull request.
+
+Avoid installing packages manually with `pip install` into the project environment because these changes are not necessarily reflected in the dependency declarations.
+
+### Dependency Consistency
+
+- Use the Python version specified in `.python-version`.
+- Keep `uv.lock` under version control.
+- Never commit `.venv/`.
+- Run `uv sync --locked` after pulling changes that modify dependencies.
+- Avoid maintaining a separate `requirements.txt` unless compatibility with external tooling requires it.
+
+### Troubleshooting
+
+**`uv` command not found:** Install uv using its official installation instructions and reopen your terminal.
+
+**Dependency synchronization fails:** Check the Python version, internet connectivity, and whether `pyproject.toml` and `uv.lock` are synchronized.
+
+**A package works locally but fails on another machine:** Verify that it was added using `uv add` and that the updated lockfile was committed.
+
 ## 2. Working agreements
 
 - Use branches for independent changes; create pull requests before merging into `main`.

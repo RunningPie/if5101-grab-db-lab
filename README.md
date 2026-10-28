@@ -36,6 +36,57 @@ The images are pinned to named release tags for consistency. For fully immutable
 
 DBeaver is optional. It provides a shared graphical workflow without requiring every contributor to learn Firebird's command-line tools. DBeaver may request a JDBC driver download when the connection is first created.
 
+## Python Environment Setup
+
+This project uses [uv](https://docs.astral.sh/uv/) for Python dependency management and reproducible development environments.
+
+### Prerequisites
+
+- Python 3.12 (managed automatically by uv)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Docker with Docker Compose v2
+- DBeaver Community (recommended SQL client)
+
+### Initial Setup
+
+After cloning the repository, run:
+
+```bash
+uv sync --locked
+```
+
+This command creates a local `.venv` directory and installs dependencies according to `pyproject.toml` and `uv.lock`.
+
+If Python 3.12 is not installed, uv can install the required Python version automatically when configured to use managed Python installations.
+
+### Running Python Scripts
+
+Use `uv run` to execute Python commands within the project environment:
+
+```bash
+uv run python scripts/orchestrator.py --help
+```
+
+The orchestrator is currently under development. The command above will become available once the script is implemented.
+
+### Dependency Management
+
+To add a runtime dependency:
+
+```bash
+uv add <package-name>
+```
+
+To add a development dependency:
+
+```bash
+uv add --dev <package-name>
+```
+
+Always commit changes to both `pyproject.toml` and `uv.lock`.
+
+Do not commit the `.venv/` directory.
+
 ## Quick start
 
 Run these commands **from the repository root**.

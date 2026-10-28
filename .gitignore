@@ -1,9 +1,6 @@
 .env
 .env.*
 !.env.example
-__pycache__/
-*.py[cod]
-.venv/
 .vscode/
 .idea/
 .DS_Store
@@ -12,3 +9,10 @@ __pycache__/
 *.backup
 results/*.csv
 results/*.json
+
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
