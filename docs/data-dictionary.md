@@ -7,7 +7,7 @@ This is our contract for what each table looks like, like an API contract but fo
 - IDs are `VARCHAR(10)`: a 3-letter prefix and 7 digits, like `PAY0000001`. The data generator assigns them, and they never change.
 - Times are `TIMESTAMP` in UTC.
 - Money is `NUMERIC(12,2)` in rupiah.
-- Fixed value lists (statuses, methods) are uppercase, like `E_WALLET`.
+- Fixed value lists (statuses, methods) are PostgreSQL `ENUM` types named after their column, with uppercase values like `E_WALLET`.
 - **Required: yes** means the column can never be empty (`NOT NULL`).
 
 ## service_areas
@@ -19,7 +19,7 @@ An area where the platform operates. Owner: Nabil.
 | `service_area_id` | `VARCHAR(10)` | yes | Primary key | `SAR0000001` |
 | `area_name` | `VARCHAR(100)` | yes | Unique together with `city` | `Menteng` |
 | `city` | `VARCHAR(100)` | yes | | `Jakarta` |
-| `area_status` | `VARCHAR(20)` | yes | `ACTIVE` or `INACTIVE`. Default `ACTIVE` | `ACTIVE` |
+| `area_status` | `area_status` (enum) | yes | `ACTIVE` or `INACTIVE`. Default `ACTIVE` | `ACTIVE` |
 
 Every service area must have at least one location.
 
@@ -45,7 +45,7 @@ A merchant's physical outlet. Owner: Nabil.
 | --- | --- | --- | --- | --- |
 | `merchant_outlet_id` | `VARCHAR(10)` | yes | Primary key | `OUT0000001` |
 | `outlet_name` | `VARCHAR(100)` | yes | | `Warung Bu Sri` |
-| `outlet_status` | `VARCHAR(20)` | yes | `OPEN`, `CLOSED` or `INACTIVE`. Default `OPEN` | `OPEN` |
+| `outlet_status` | `outlet_status` (enum) | yes | `OPEN`, `CLOSED` or `INACTIVE`. Default `OPEN` | `OPEN` |
 | `location_id` | `VARCHAR(10)` | yes | Must exist in `locations`. Several outlets can share one location | `LOC0000001` |
 
 ## payments
@@ -55,8 +55,8 @@ The payment for one service order. Owner: Nabil.
 | Column | Type | Required | Rules | Example |
 | --- | --- | --- | --- | --- |
 | `payment_id` | `VARCHAR(10)` | yes | Primary key | `PAY0000001` |
-| `payment_method` | `VARCHAR(20)` | yes | `CASH`, `E_WALLET`, `CARD` or `PAYLATER` | `E_WALLET` |
-| `payment_status` | `VARCHAR(20)` | yes | `PENDING`, `PAID`, `FAILED` or `REFUNDED`. Default `PENDING` | `PAID` |
+| `payment_method` | `payment_method` (enum) | yes | `CASH`, `E_WALLET`, `CARD` or `PAYLATER` | `E_WALLET` |
+| `payment_status` | `payment_status` (enum) | yes | `PENDING`, `PAID`, `FAILED` or `REFUNDED`. Default `PENDING` | `PAID` |
 | `amount` | `NUMERIC(12,2)` | yes | More than 0 | `45000.00` |
 | `paid_at` | `TIMESTAMP` | when `PAID` or `REFUNDED` | Must be empty when `PENDING` or `FAILED` | `2026-10-29 03:15:00` |
 | `order_id` | `VARCHAR(10)` | yes | Must exist in `service_orders`. One payment per order | `ORD0000001` |
