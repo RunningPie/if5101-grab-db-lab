@@ -2,7 +2,6 @@
 
 ## Supported RDBMS
 - PostgreSQL
-- Firebird SQL
 
 ## Containerization
 - Docker Engine
@@ -18,4 +17,4 @@
 See README.md for startup instructions.
 
 ## Database Configuration
-To be documented after selecting the RDBMS.
+To be documented for PostgreSQL.

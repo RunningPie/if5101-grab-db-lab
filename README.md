@@ -13,28 +13,20 @@ This academic case study models the **Mobility & Fulfillment** domain of a Grab-
 - Ten read queries and ten write queries, including complex workloads
 - Synthetic data generation at multiple scales
 - Repeatable query execution and performance analysis
-- Comparison of database technology candidates before selecting the primary RDBMS
 
-**Current status:** Initial repository scaffold. The relational schema, data generators, queries, and benchmark runner are planned work, not included in this starter.
+**Current status:** The PostgreSQL schema is partially implemented. Data generators, queries, and the benchmark runner are planned.
 
-## Database options
+## Database
 
-The team is currently evaluating two RDBMS alternatives. The Docker Compose configurations are independent, and either database can be used without installing its server directly on the host.
-
-| RDBMS | Docker image | Default host port | Compose file |
-| --- | --- | --- | --- |
-| PostgreSQL | `postgres:17` | `5432` | `docker/compose.postgres.yaml` |
-| Firebird SQL | `firebirdsql/firebird:5.0.4` | `3050` | `docker/compose.firebird.yaml` |
-
-The images are pinned to named release tags for consistency. For fully immutable builds, pin an image digest after validation. Docker standardizes the database runtime, but performance still depends on host hardware and resource limits.
+The project uses PostgreSQL 17 via `docker/compose.postgres.yaml`, with host port `5432` by default. The Docker image uses a named release tag; pin an image digest after validation for a fully immutable build. Performance still depends on host hardware and resource limits.
 
 ## Prerequisites
 
 - [Git](https://git-scm.com/)
 - [Docker Engine](https://docs.docker.com/engine/) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) with Docker Compose v2
-- **Recommended:** [DBeaver Community](https://dbeaver.io/) as a GUI SQL client for both PostgreSQL and Firebird
+- **Recommended:** [DBeaver Community](https://dbeaver.io/) as a GUI SQL client for PostgreSQL
 
-DBeaver is optional. It provides a shared graphical workflow without requiring every contributor to learn Firebird's command-line tools. DBeaver may request a JDBC driver download when the connection is first created.
+DBeaver is optional and may request a JDBC driver download when the connection is first created.
 
 ## Python Environment Setup
 
@@ -105,42 +97,29 @@ Run these commands **from the repository root**.
 
 2. Replace all sample passwords in `.env` with private local passwords. **Never commit `.env`.**
 
-3. Start your preferred database:
-
-   **PostgreSQL**
+3. Start PostgreSQL:
 
    ```bash
    docker compose --env-file .env -f docker/compose.postgres.yaml up -d
    docker compose -f docker/compose.postgres.yaml ps
    ```
 
-   **Firebird**
-
-   ```bash
-   docker compose --env-file .env -f docker/compose.firebird.yaml up -d
-   docker compose -f docker/compose.firebird.yaml ps
-   ```
-
-4. Open DBeaver and select **Database → New Database Connection**. Select the relevant driver, enter the connection parameters below, and choose **Test Connection**.
+4. Open DBeaver and select **Database → New Database Connection**. Select the PostgreSQL driver, enter the connection parameters below, and choose **Test Connection**.
 
 ### DBeaver connection settings
 
-| Setting | PostgreSQL | Firebird |
-| --- | --- | --- |
-| Driver | PostgreSQL | Firebird |
-| Host | `127.0.0.1` | `127.0.0.1` |
-| Port | `POSTGRES_PORT` (default `5432`) | `FIREBIRD_PORT` (default `3050`) |
-| Database | `POSTGRES_DB` (default `grab_lab`) | `/var/lib/firebird/data/grab_lab.fdb`* |
-| Username | `POSTGRES_USER` | `SYSDBA` |
-| Password | `POSTGRES_PASSWORD` | `FIREBIRD_ROOT_PASSWORD` |
+| Setting | Value |
+| --- | --- |
+| Driver | PostgreSQL |
+| Host | `127.0.0.1` |
+| Port | `POSTGRES_PORT` (default `5432`) |
+| Database | `POSTGRES_DB` (default `grab_lab`) |
+| Username | `POSTGRES_USER` |
+| Password | `POSTGRES_PASSWORD` |
 
-*For Firebird, the database is a **path inside the container**, not a file path on your host computer. If `FIREBIRD_DATABASE` was changed, replace `grab_lab.fdb` with that filename. In DBeaver select a **server/remote** Firebird connection (not embedded/local-file mode). The exact field name depends on the JDBC driver.
-
-These databases are initially empty: running the Compose file does **not** create the project's relational tables or populate sample data.
+The database is initially empty: running Compose does **not** create the project's relational tables or populate sample data. Apply the SQL files in `sql/postgres/schema` in numeric order to create the currently implemented schema.
 
 ## Container lifecycle
-
-Replace the Compose path with `docker/compose.firebird.yaml` for Firebird.
 
 ```bash
 # Show status
@@ -159,7 +138,7 @@ docker compose -f docker/compose.postgres.yaml up -d
 docker compose -f docker/compose.postgres.yaml down -v
 ```
 
-Each RDBMS uses its own Compose project name and persistent Docker volume. Both can run simultaneously when their mapped host ports are available. Changes to SQL files do not automatically migrate an existing database: apply migrations explicitly or reset your local database when appropriate.
+Changes to SQL files do not automatically migrate an existing database: apply migrations explicitly or reset your local database when appropriate.
 
 ## Repository layout
 
@@ -169,11 +148,10 @@ grab-db-lab/
 ├── .env.example
 ├── .gitignore
 ├── docker/
-│   ├── compose.postgres.yaml
-│   └── compose.firebird.yaml
+│   └── compose.postgres.yaml
 ├── docs/
 │   └── team-setup.md          # Contributor guide
-├── sql/                        # Planned: schema and queries by DBMS
+├── sql/                        # PostgreSQL schema and planned queries
 ├── scripts/                    # Planned: generator, orchestration, benchmarks
 ├── config/                     # Planned: dataset profiles
 └── results/                    # Planned: summarized experiment outputs
@@ -190,5 +168,4 @@ For contributor conventions and troubleshooting, see [Team setup guide](docs/tea
 ## References
 
 - [PostgreSQL Docker image](https://hub.docker.com/_/postgres)
-- [Firebird official Docker images](https://github.com/FirebirdSQL/firebird-docker)
 - [DBeaver documentation: Creating connections](https://dbeaver.com/docs/dbeaver/Create-Connection/)

@@ -9,27 +9,25 @@ Update this file as the configuration evolves, but **DO NOT** put real passwords
 2. Clone the repository.
 3. Copy `.env.example` to `.env`.
 4. Set unique local passwords in `.env`. This file is ignored by Git.
-5. From the repository root, start either PostgreSQL or Firebird using the commands in the public [README](../README.md).
+5. From the repository root, start PostgreSQL using the commands in the public [README](../README.md).
 6. Confirm the container is running:
 
    ```bash
    docker compose -f docker/compose.postgres.yaml ps
-   # or
-   docker compose -f docker/compose.firebird.yaml ps
    ```
 
 7. Open DBeaver and connect with the following settings:
 
-| Property | PostgreSQL | Firebird |
-| --- | --- | --- |
-| Connection mode | Server | Remote/server (not embedded) |
-| Host | `127.0.0.1` | `127.0.0.1` |
-| Port | `POSTGRES_PORT` from `.env` | `FIREBIRD_PORT` from `.env` |
-| Database | `POSTGRES_DB` from `.env` | `/var/lib/firebird/data/<FIREBIRD_DATABASE>` |
-| User | `POSTGRES_USER` from `.env` | `SYSDBA` |
-| Password | `POSTGRES_PASSWORD` from `.env` | `FIREBIRD_ROOT_PASSWORD` from `.env` |
+| Property | PostgreSQL |
+| --- | --- |
+| Connection mode | Server |
+| Host | `127.0.0.1` |
+| Port | `POSTGRES_PORT` from `.env` |
+| Database | `POSTGRES_DB` from `.env` |
+| User | `POSTGRES_USER` from `.env` |
+| Password | `POSTGRES_PASSWORD` from `.env` |
 
-DBeaver may ask to install a JDBC driver on the first connection. Use **Test Connection** before saving. The Firebird database path is inside the Docker container; it is not a Windows path.
+DBeaver may ask to install a JDBC driver on the first connection. Use **Test Connection** before saving.
 
 ## Python Development Workflow
 
@@ -88,8 +86,8 @@ Avoid installing packages manually with `pip install` into the project environme
 - Use branches for independent changes; create pull requests before merging into `main`.
 - Coordinate column names, primary keys, foreign keys, and relationship constraints before implementation.
 - Follow consistent `snake_case` naming conventions for tables and columns.
-- Keep PostgreSQL-specific and Firebird-specific SQL in separate folders when dialect differences require it.
-- Do not commit `.env`, database volume contents, `.fdb` files, or large generated datasets.
+- Keep PostgreSQL schema and queries in `sql/postgres/`.
+- Do not commit `.env`, database volume contents or large generated datasets.
 - Prefer reproducible scripts and versioned dataset parameters over manually shared SQL dumps.
 
 ## 3. Proposed data ownership
@@ -105,25 +103,22 @@ This is the proposed assignment, not an enforcement mechanism. All members may w
 ## 4. Planned implementation milestones
 
 - Finalize ER-to-relational mapping and foreign-key dependencies.
-- Select the primary RDBMS after a small proof of concept.
 - Implement DDL and constraints.
 - Implement data generation profiles and reproducible seed orchestration.
 - Implement 10 read and 10 write queries.
 - Benchmark query performance on a designated reference host and record methodology.
 
-The `sql/`, `scripts/`, and `config/` directories are planned; their features are not included in the current starter.
+The PostgreSQL schema is partially implemented; data generation and benchmarking remain planned.
 
 ## 5. Troubleshooting
 
 **Connection refused:** Check `docker compose ... ps` and `docker compose ... logs`. Ensure Docker is running and the port in `.env` matches DBeaver.
 
-**Port in use:** Change `POSTGRES_PORT` or `FIREBIRD_PORT` in `.env`, recreate the container, and update DBeaver.
-
-**Firebird cannot find the database:** Use the container path `/var/lib/firebird/data/<filename>.fdb`, not a host-side file path. Verify `FIREBIRD_DATABASE` and startup logs.
+**Port in use:** Change `POSTGRES_PORT` in `.env`, recreate the container, and update DBeaver.
 
 **Changed passwords do not work:** Existing database volumes often retain their initialized authentication state. Do not assume updating `.env` changes an existing user's password.
 
-**Changed SQL has no effect:** The Compose files launch the DBMS; they do not apply or migrate project schema automatically.
+**Changed SQL has no effect:** The Compose file launches PostgreSQL; they do not apply or migrate project schema automatically.
 
 **Need a clean local database:** Back up anything important, then use `docker compose -f <compose-file> down -v` to remove its Docker volume. This permanently deletes local data.
 
