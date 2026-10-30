@@ -34,7 +34,7 @@ This project uses [uv](https://docs.astral.sh/uv/) for Python dependency managem
 
 ### Prerequisites
 
-- Python 3.12 (managed automatically by uv)
+- Python 3.13 (managed automatically by uv)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Docker with Docker Compose v2
 - DBeaver Community (recommended SQL client)
@@ -49,7 +49,7 @@ uv sync --locked
 
 This command creates a local `.venv` directory and installs dependencies according to `pyproject.toml` and `uv.lock`.
 
-If Python 3.12 is not installed, uv can install the required Python version automatically when configured to use managed Python installations.
+If Python 3.13 is not installed, uv can install the required Python version automatically when configured to use managed Python installations.
 
 ### Running Python Scripts
 
@@ -59,7 +59,13 @@ Use `uv run` to execute Python commands within the project environment:
 uv run python scripts/orchestrator.py --help
 ```
 
-The orchestrator is currently under development. The command above will become available once the script is implemented.
+With PostgreSQL running and `.env` configured, initialize an empty database with:
+
+```bash
+uv run python scripts/orchestrator.py
+```
+
+The default command checks the connection and applies `sql/DDL` in a single transaction. It does not generate data or run benchmarks. The schema is not a migration: rerunning initialization on an existing schema will fail without replacing it. The explicit `seed`, `benchmark`, and `run` commands are reserved for future implementation and currently make no changes.
 
 ### Dependency Management
 
@@ -117,7 +123,7 @@ Run these commands **from the repository root**.
 | Username | `POSTGRES_USER` |
 | Password | `POSTGRES_PASSWORD` |
 
-The database is initially empty: running Compose does **not** create the project's relational tables or populate sample data. Apply the SQL files in `sql/postgres/schema` in numeric order to create the currently implemented schema.
+The database is initially empty: running Compose does **not** create the project's relational tables or populate sample data. Run `uv run python scripts/orchestrator.py` to create the currently implemented schema.
 
 ## Container lifecycle
 
@@ -152,7 +158,7 @@ grab-db-lab/
 ├── docs/
 │   └── team-setup.md          # Contributor guide
 ├── sql/                        # PostgreSQL schema and planned queries
-├── scripts/                    # Planned: generator, orchestration, benchmarks
+├── scripts/                    # Schema orchestrator and planned experiment scripts
 ├── config/                     # Planned: dataset profiles
 └── results/                    # Planned: summarized experiment outputs
 ```

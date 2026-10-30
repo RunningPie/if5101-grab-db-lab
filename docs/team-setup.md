@@ -13,7 +13,7 @@ Update this file as the configuration evolves, but **DO NOT** put real passwords
 6. Confirm the container is running:
 
    ```bash
-   docker compose -f docker/compose.postgres.yaml ps
+   docker compose --env-file .env -f docker/compose.postgres.yaml up --build -d
    ```
 
 7. Open DBeaver and connect with the following settings:
@@ -86,7 +86,7 @@ Avoid installing packages manually with `pip install` into the project environme
 - Use branches for independent changes; create pull requests before merging into `main`.
 - Coordinate column names, primary keys, foreign keys, and relationship constraints before implementation.
 - Follow consistent `snake_case` naming conventions for tables and columns.
-- Keep PostgreSQL schema and queries in `sql/postgres/`.
+- Keep schema SQL in `sql/DDL/` and queries in `sql/DML/`.
 - Do not commit `.env`, database volume contents or large generated datasets.
 - Prefer reproducible scripts and versioned dataset parameters over manually shared SQL dumps.
 
