@@ -12,5 +12,15 @@ ALTER TABLE merchant_outlets
         FOREIGN KEY (location_id) REFERENCES locations (location_id)
         ON UPDATE CASCADE ON DELETE RESTRICT;
 
--- payments -> service_orders (relationship set paid by): fk_payments_order
--- will be added once service_orders is merged.
+
+ALTER TABLE service_orders
+    ADD CONSTRAINT fk_service_orders_customer FOREIGN KEY (customer_id) REFERENCES customers (customer_id);
+ALTER TABLE food_orders
+    ADD CONSTRAINT fk_food_orders_order FOREIGN KEY (order_id) REFERENCES service_orders (order_id),
+    ADD CONSTRAINT fk_food_orders_outlet FOREIGN KEY (merchant_outlet_id) REFERENCES merchant_outlets (merchant_outlet_id);
+ALTER TABLE delivery_orders
+    ADD CONSTRAINT fk_delivery_orders_order FOREIGN KEY (order_id) REFERENCES service_orders (order_id);
+ALTER TABLE mobility_orders
+    ADD CONSTRAINT fk_mobility_orders_order FOREIGN KEY (order_id) REFERENCES service_orders (order_id);
+ALTER TABLE payments
+    ADD CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES service_orders (order_id);
