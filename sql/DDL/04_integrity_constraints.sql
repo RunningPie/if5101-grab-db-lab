@@ -54,6 +54,29 @@ $$;
 CREATE TRIGGER trg_payment_status_transition BEFORE UPDATE ON payments
     FOR EACH ROW EXECUTE FUNCTION check_payment_status_transition();
 
+-- Every service area needs at least one location. Checked at commit, so an area
+-- and its first location can be inserted together, and an area can be deleted
+-- together with all of its locations.
+CREATE FUNCTION check_service_area_has_location() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE target_id entity_id;
+BEGIN
+    target_id := CASE WHEN TG_OP = 'INSERT' THEN NEW.service_area_id ELSE OLD.service_area_id END;
+    -- Lock the area so concurrent writers cannot each remove one of its last two locations.
+    PERFORM 1 FROM service_areas WHERE service_area_id = target_id FOR UPDATE;
+    -- A deleted area does not need a location.
+    IF NOT FOUND THEN RETURN NULL; END IF;
+    IF NOT EXISTS (SELECT 1 FROM locations WHERE service_area_id = target_id) THEN
+        RAISE EXCEPTION 'Service area % must have at least one location', target_id
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+CREATE CONSTRAINT TRIGGER trg_service_area_has_location AFTER INSERT ON service_areas
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_service_area_has_location();
+CREATE CONSTRAINT TRIGGER trg_location_area_change AFTER UPDATE OF service_area_id OR DELETE ON locations
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_service_area_has_location();
+
 -- Lock the parent before subtype changes so concurrent writers cannot both
 -- add different subtypes for the same order. Order IDs are immutable.
 CREATE FUNCTION lock_subtype_parent() RETURNS trigger LANGUAGE plpgsql AS $$
