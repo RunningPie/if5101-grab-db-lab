@@ -105,3 +105,59 @@ CREATE TABLE mobility_orders (
     pickup_notes    VARCHAR(100),
     CONSTRAINT chk_mobility_orders_passengers CHECK (passenger_count >= 1)
 );
+
+-- 10. driver_partners
+CREATE TYPE driver_status AS ENUM ('ACTIVE', 'INACTIVE', 'SUSPENDED');
+CREATE TABLE driver_partners (
+    driver_partner_id entity_id PRIMARY KEY,
+    full_name         VARCHAR(100) NOT NULL,
+    phone_number      VARCHAR(16) NOT NULL,
+    email             VARCHAR(100) NOT NULL,
+    driver_status     driver_status NOT NULL DEFAULT 'ACTIVE',
+    CONSTRAINT uq_driver_partners_phone UNIQUE (phone_number),
+    CONSTRAINT uq_driver_partners_email UNIQUE (email),
+    CONSTRAINT chk_driver_partners_phone CHECK (phone_number ~ '^\+?[0-9]{7,15}$'),
+    CONSTRAINT chk_driver_partners_email CHECK (email ~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$')
+);
+
+-- 11. vehicles
+CREATE TYPE vehicle_status AS ENUM ('ACTIVE', 'INACTIVE', 'UNDER_MAINTENANCE');
+CREATE TABLE vehicles (
+    vehicle_id        entity_id PRIMARY KEY,
+    plate_number      VARCHAR(15) NOT NULL,
+    vehicle_type      VARCHAR(30) NOT NULL,
+    vehicle_status    vehicle_status NOT NULL DEFAULT 'ACTIVE',
+    driver_partner_id entity_id NOT NULL,
+    CONSTRAINT uq_vehicles_plate UNIQUE (plate_number)
+);
+
+-- 12. trips (relationship set generates & starts at / ends at)
+CREATE TYPE trip_status AS ENUM ('SEARCHING', 'ALLOCATED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
+CREATE TABLE trips (
+    trip_id           entity_id PRIMARY KEY,
+    started_at        TIMESTAMPTZ,
+    completed_at      TIMESTAMPTZ,
+    trip_status       trip_status NOT NULL DEFAULT 'SEARCHING',
+    order_id          entity_id NOT NULL,
+    start_location_id entity_id NOT NULL,
+    end_location_id   entity_id NOT NULL,
+    CONSTRAINT chk_trips_completed_at CHECK (
+        (trip_status = 'COMPLETED' AND completed_at IS NOT NULL) OR
+        (trip_status != 'COMPLETED')
+    )
+);
+
+-- 13. driver_assignments (relationship set assigned & fulfills)
+CREATE TYPE assignment_status AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'CANCELLED');
+CREATE TABLE driver_assignments (
+    assignment_id     entity_id PRIMARY KEY,
+    assigned_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    assignment_status assignment_status NOT NULL DEFAULT 'PENDING',
+    responded_at      TIMESTAMPTZ,
+    ended_at          TIMESTAMPTZ,
+    end_reason        VARCHAR(100),
+    trip_id           entity_id NOT NULL,
+    vehicle_id        entity_id NOT NULL
+);
+
+
