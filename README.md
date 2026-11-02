@@ -163,7 +163,7 @@ grab-db-lab/
 │   └── team-setup.md          # Contributor guide
 ├── sql/                        # PostgreSQL schema and planned queries
 ├── scripts/                    # Orchestrator and data generator (see scripts/README.md)
-├── config/                     # Dataset profiles
+├── config/                     # Dataset profiles (see config/README.md)
 └── results/                    # Planned: summarized experiment outputs
 ```
 
