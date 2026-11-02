@@ -13,7 +13,7 @@ CREATE TABLE service_areas (
     area_name        VARCHAR(100)  NOT NULL,
     city             VARCHAR(100)  NOT NULL,
     area_status      area_status   NOT NULL DEFAULT 'ACTIVE',
-    CONSTRAINT uq_service_areas_nama_kota UNIQUE (area_name, city)
+    CONSTRAINT uq_service_areas_name_city UNIQUE (area_name, city)
 );
 
 -- 2. locations (entity set Locations + relationship set contains)
