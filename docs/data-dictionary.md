@@ -21,8 +21,6 @@ An area where the platform operates. Owner: Nabil.
 | `city` | `VARCHAR(100)` | yes | | `Jakarta` |
 | `area_status` | `area_status` (enum) | yes | `ACTIVE` or `INACTIVE`. Default `ACTIVE` | `ACTIVE` |
 
-Every service area must have at least one location.
-
 ## locations
 
 A point on the map with an address. Owner: Nabil.
@@ -34,8 +32,6 @@ A point on the map with an address. Owner: Nabil.
 | `longitude` | `NUMERIC(9,6)` | yes | From -180 to 180 | `106.830000` |
 | `address` | `VARCHAR(255)` | yes | | `Jl. Teuku Umar No. 1` |
 | `service_area_id` | `VARCHAR(10)` | yes | Must exist in `service_areas` | `SAR0000001` |
-
-You can't delete an area's last location or move it to another area.
 
 ## merchant_outlets
 
