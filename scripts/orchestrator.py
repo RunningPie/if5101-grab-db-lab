@@ -7,8 +7,11 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 from dotenv import dotenv_values
+
+from generate_data import write_seed_script
 
 ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = ROOT / '.env'
@@ -24,7 +27,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     commands = parser.add_subparsers(dest='command')
     commands.add_parser('init', help='initialize the schema in an empty database')
-    for name in ('seed', 'benchmark', 'run'):
+    seed = commands.add_parser('seed', help='generate synthetic data and load it into the empty schema')
+    seed.add_argument('--profile', required=True, choices=('small', 'medium', 'large'))
+    for name in ('benchmark', 'run'):
         # TO DO: Implement these commands in the future. For now, they are placeholders to avoid confusion.
         command = commands.add_parser(name, help='planned experiment step; not yet implemented')
         command.add_argument('--profile', required=True, choices=('small', 'medium', 'large'))
@@ -67,11 +72,39 @@ def initialize_schema(settings: dict[str, str]) -> None:
     print('Schema initialized successfully.')
 
 
+def seed_database(settings: dict[str, str], profile: str) -> None:
+    if not COMPOSE_FILE.is_file():
+        raise ValueError(f'Missing Compose file: {COMPOSE_FILE}')
+    command = [
+        'docker', 'compose', '--env-file', str(ENV_FILE), '-f', str(COMPOSE_FILE),
+        'exec', '-T', 'postgres', 'psql', '-X', '-v', 'ON_ERROR_STOP=1',
+        '-U', settings['POSTGRES_USER'], '-d', settings['POSTGRES_DB'],
+    ]
+    # Same connection check as init, done before spending time on generation.
+    subprocess.run(command + ['-c', 'SELECT 1'], check=True, env=settings,
+                   stdout=subprocess.DEVNULL)
+    print(f"Connected to PostgreSQL. Generating the '{profile}' dataset...", flush=True)
+    with tempfile.TemporaryFile() as sql:
+        write_seed_script(profile, sql)
+        sql.seek(0)
+        print('Loading it in one transaction...', flush=True)
+        subprocess.run(command + ['--single-transaction', '-f', '-'], stdin=sql,
+                       check=True, env=settings)
+    print('Data seeded successfully.')
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if args.command in ('seed', 'benchmark', 'run'):
+    if args.command in ('benchmark', 'run'):
         print(f"The '{args.command}' command is not implemented yet; no changes were made.", file=sys.stderr)
         return 1
+    if args.command == 'seed':
+        try:
+            seed_database(load_settings(), args.profile)
+        except (ValueError, OSError, subprocess.CalledProcessError) as exc:
+            print(f'Seeding failed: {exc}', file=sys.stderr)
+            return 1
+        return 0
     try:
         initialize_schema(load_settings())
     except (ValueError, OSError, subprocess.CalledProcessError) as exc:
