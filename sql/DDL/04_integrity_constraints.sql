@@ -122,3 +122,34 @@ CREATE TRIGGER trg_merchant_outlet_id_immutable BEFORE UPDATE OF merchant_outlet
     FOR EACH ROW EXECUTE FUNCTION prevent_identifier_change('merchant_outlet_id');
 CREATE TRIGGER trg_payment_id_immutable BEFORE UPDATE OF payment_id ON payments
     FOR EACH ROW EXECUTE FUNCTION prevent_identifier_change('payment_id');
+
+
+-- Trip status transition validation
+CREATE FUNCTION check_trip_status_transition() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.trip_status IS DISTINCT FROM OLD.trip_status AND NOT (
+        (OLD.trip_status = 'SEARCHING' AND NEW.trip_status IN ('ALLOCATED', 'CANCELLED')) OR
+        (OLD.trip_status = 'ALLOCATED' AND NEW.trip_status IN ('IN_PROGRESS', 'CANCELLED')) OR
+        (OLD.trip_status = 'IN_PROGRESS' AND NEW.trip_status IN ('COMPLETED', 'CANCELLED'))
+    ) THEN
+        RAISE EXCEPTION 'Invalid trip status transition: % -> %', OLD.trip_status, NEW.trip_status
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER trg_trip_status_transition BEFORE UPDATE OF trip_status ON trips
+    FOR EACH ROW EXECUTE FUNCTION check_trip_status_transition();
+
+-- Immutability triggers 
+CREATE TRIGGER trg_driver_partner_id_immutable BEFORE UPDATE OF driver_partner_id ON driver_partners
+    FOR EACH ROW EXECUTE FUNCTION prevent_identifier_change('driver_partner_id');
+
+CREATE TRIGGER trg_vehicle_id_immutable BEFORE UPDATE OF vehicle_id ON vehicles
+    FOR EACH ROW EXECUTE FUNCTION prevent_identifier_change('vehicle_id');
+
+CREATE TRIGGER trg_trip_id_immutable BEFORE UPDATE OF trip_id ON trips
+    FOR EACH ROW EXECUTE FUNCTION prevent_identifier_change('trip_id');
+
+CREATE TRIGGER trg_assignment_id_immutable BEFORE UPDATE OF assignment_id ON driver_assignments
+    FOR EACH ROW EXECUTE FUNCTION prevent_identifier_change('assignment_id');
