@@ -152,4 +152,67 @@ pickup and dropoff points will be handled in different table.
 
 Owners, please add these using the same table format.
 
-- **Ishak:** `trips`, `driver_assignments`, `driver_partners`, `vehicles`.
+## driver_partners
+
+Representing driver partner entities who execute trips. Owner: Ishak.
+
+| Column | Type | Required | Rules | Example |
+| --- | --- | --- | --- | --- |
+| `driver_partner_id` | `VARCHAR(10)` | yes | Primary key | `DRV0000001` |
+| `full_name` | `VARCHAR(100)` | yes | | `Budi Santoso` |
+| `phone_number` | `VARCHAR(16)` | yes | Unique, must be valid phone number | `+6281234567890` |
+| `email` | `VARCHAR(100)` | yes | Unique, must be valid email | `budi.driver@example.com` |
+| `driver_status` | `driver_status` (enum) | yes | `ACTIVE`, `INACTIVE`, or `SUSPENDED`. Default `ACTIVE` | `ACTIVE` |
+
+Phone number and email validation use PostgreSQL `CHECK` statements with regex.
+
+## vehicles
+
+A vehicle registered by a driver partner to fulfill trips. Owner: Ishak.
+
+| Column | Type | Required | Rules | Example |
+| --- | --- | --- | --- | --- |
+| `vehicle_id` | `VARCHAR(10)` | yes | Primary key | `VEH0000001` |
+| `plate_number` | `VARCHAR(15)` | yes | Unique | `B 1234 ABC` |
+| `vehicle_type` | `VARCHAR(30)` | yes | Type/Model of vehicle | `Motorcycle` |
+| `vehicle_status` | `vehicle_status` (enum) | yes | `ACTIVE`, `INACTIVE`, or `UNDER_MAINTENANCE`. Default `ACTIVE` | `ACTIVE` |
+| `driver_partner_id` | `VARCHAR(10)` | yes | Foreign key reference to `driver_partners` | `DRV0000001` |
+
+Represents the internal aggregation (`registers`) with `driver_partners`.
+
+## trips
+
+The execution of a service order. Owner: Ishak.
+
+| Column | Type | Required | Rules | Example |
+| --- | --- | --- | --- | --- |
+| `trip_id` | `VARCHAR(10)` | yes | Primary key | `TRP0000001` |
+| `started_at` | `TIMESTAMPTZ` | no | | `2026-10-30 19:40:00+00` |
+| `completed_at` | `TIMESTAMPTZ` | when `COMPLETED` | Must be present when `trip_status` is `COMPLETED` | `2026-10-30 20:05:00+00` |
+| `trip_status` | `trip_status` (enum) | yes | `SEARCHING`, `ALLOCATED`, `IN_PROGRESS`, `COMPLETED`, or `CANCELLED`. Default `SEARCHING` | `COMPLETED` |
+| `order_id` | `VARCHAR(10)` | yes | Foreign key reference to `service_orders` | `ORD0000001` |
+| `start_location_id` | `VARCHAR(10)` | yes | Foreign key reference to `locations` (pickup/origin) | `LOC0000001` |
+| `end_location_id` | `VARCHAR(10)` | yes | Foreign key reference to `locations` (destination) | `LOC0000002` |
+
+Valid state transitions for `trip_status`:
+- `SEARCHING`: can go to `ALLOCATED` or `CANCELLED`
+- `ALLOCATED`: can go to `IN_PROGRESS` or `CANCELLED`
+- `IN_PROGRESS`: can go to `COMPLETED` or `CANCELLED`
+- `COMPLETED` / `CANCELLED`: final states
+
+## driver_assignments
+
+Assignment attempts connecting trips to vehicles and driver partners. Owner: Ishak.
+
+| Column | Type | Required | Rules | Example |
+| --- | --- | --- | --- | --- |
+| `assignment_id` | `VARCHAR(10)` | yes | Primary key | `ASN0000001` |
+| `assigned_at` | `TIMESTAMPTZ` | yes | Default `CURRENT_TIMESTAMP` | `2026-10-30 19:38:00+00` |
+| `assignment_status` | `assignment_status` (enum) | yes | `PENDING`, `ACCEPTED`, `REJECTED`, `EXPIRED`, or `CANCELLED`. Default `PENDING` | `ACCEPTED` |
+| `responded_at` | `TIMESTAMPTZ` | no | Timestamp when driver responds | `2026-10-30 19:39:00+00` |
+| `ended_at` | `TIMESTAMPTZ` | no | Timestamp when assignment ends | `2026-10-30 20:05:00+00` |
+| `end_reason` | `VARCHAR(100)` | no | Reason if rejected/cancelled/expired | `Driver unreachable` |
+| `trip_id` | `VARCHAR(10)` | yes | Foreign key reference to `trips` | `TRP0000001` |
+| `vehicle_id` | `VARCHAR(10)` | yes | Foreign key reference to `vehicles` | `VEH0000001` |
+
+Represents the `fulfills` relationship set connecting `trips` with the `vehicles` + `driver_partners` aggregation.
