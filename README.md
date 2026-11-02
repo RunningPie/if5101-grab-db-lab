@@ -14,7 +14,7 @@ This academic case study models the **Mobility & Fulfillment** domain of a Grab-
 - Synthetic data generation at multiple scales
 - Repeatable query execution and performance analysis
 
-**Current status:** The PostgreSQL schema is partially implemented. Data generators, queries, and the benchmark runner are planned.
+**Current status:** The PostgreSQL schema and the synthetic data generator are implemented. Queries and the benchmark runner are planned.
 
 ## Database
 
@@ -65,7 +65,7 @@ With PostgreSQL running and `.env` configured, initialize an empty database with
 uv run python scripts/orchestrator.py
 ```
 
-The default command checks the connection and applies `sql/DDL` in a single transaction. It does not generate data or run benchmarks. The schema is not a migration: rerunning initialization on an existing schema will fail without replacing it. The explicit `seed`, `benchmark`, and `run` commands are reserved for future implementation and currently make no changes.
+The default command checks the connection and applies `sql/DDL` in a single transaction. It does not generate data or run benchmarks. The schema is not a migration: rerunning initialization on an existing schema will fail without replacing it. The `seed --profile <name>` command loads synthetic data into an initialized schema; see [Synthetic data](#synthetic-data). The `benchmark` and `run` commands are reserved for future implementation and currently make no changes.
 
 ### Dependency Management
 
@@ -125,6 +125,10 @@ Run these commands **from the repository root**.
 
 The database is initially empty: running Compose does **not** create the project's relational tables or populate sample data. Run `uv run python scripts/orchestrator.py` to create the currently implemented schema.
 
+## Synthetic data
+
+Each dataset profile in `config/dataset_profile.yaml` (`small`, `medium`, `large`) is loaded into its own database (`grab_lab_small`, `grab_lab_medium`, `grab_lab_large`) with `orchestrator.py init` and `seed`. The data is reproducible, so rebuild a profile locally instead of sharing database dumps. See [scripts/README.md](scripts/README.md) for the commands and for how the data is generated.
+
 ## Container lifecycle
 
 ```bash
@@ -158,8 +162,8 @@ grab-db-lab/
 ├── docs/
 │   └── team-setup.md          # Contributor guide
 ├── sql/                        # PostgreSQL schema and planned queries
-├── scripts/                    # Schema orchestrator and planned experiment scripts
-├── config/                     # Planned: dataset profiles
+├── scripts/                    # Orchestrator and data generator (see scripts/README.md)
+├── config/                     # Dataset profiles
 └── results/                    # Planned: summarized experiment outputs
 ```
 
@@ -167,7 +171,7 @@ grab-db-lab/
 
 The Git repository synchronizes source code and configuration **not live database state**. Each contributor runs a local database with its own persistent volume.
 
-Synthetic data generation will use versioned dataset profiles and fixed random seeds. Benchmark results should be collected on a designated host and documented with hardware specifications, dataset sizes, query settings, and repetitions.
+Synthetic data generation uses versioned dataset profiles and a fixed random seed. Benchmark results should be collected on a designated host and documented with hardware specifications, dataset sizes, query settings, and repetitions.
 
 For contributor conventions and troubleshooting, see [Team setup guide](docs/team-setup.md).
 
