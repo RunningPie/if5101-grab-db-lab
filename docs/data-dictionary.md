@@ -57,6 +57,15 @@ The payment for one service order. Owner: Nabil.
 | `paid_at` | `TIMESTAMPTZ` | when `PAID` or `REFUNDED` | Must be empty when `PENDING` or `FAILED` | `2026-10-29 03:15:00+00` |
 | `order_id` | `VARCHAR(10)` | yes | Must exist in `service_orders`. One payment per order | `ORD0000001` |
 
+What each `payment_status` means:
+
+| Status | Meaning |
+| --- | --- |
+| `PENDING` | The payment isn't finished yet. A cash payment stays `PENDING` until the trip is completed. |
+| `PAID` | The payment has been received, and `paid_at` records when. |
+| `FAILED` | The payment failed, or a pending cash payment failed because the order was cancelled. |
+| `REFUNDED` | A `PAID` payment was returned. `paid_at` keeps the time of the original payment. |
+
 A payment's status can only change like this: `PENDING` → `PAID` or `FAILED`, `FAILED` → `PENDING` (retry), and `PAID` → `REFUNDED`. A refund keeps the original `paid_at`.
 
 ## customers
@@ -85,6 +94,17 @@ Representing a commission to fulfill a request made by a user (customer). Owner:
 | `order_status` | order_status (ENUM) | yes | either: `PENDING`, `CONFIRMED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, or `FAILED` | `COMPLETED` |
 | `total_amount` | `NUMERIC(12,2)` | yes | must be >= 0 | `45000.00` |
 | `customer_id` | `VARCHAR(10)` | yes | foreign key reference to customers table | `CUS0000001` |
+
+What each `order_status` means:
+
+| Status | Meaning |
+| --- | --- |
+| `PENDING` | The order has been placed but isn't confirmed yet, or it is waiting for the result of a non-cash payment. |
+| `CONFIRMED` | The order and its payment method are confirmed. The trip may still be looking for a driver (`SEARCHING`) or already have one (`ALLOCATED`). |
+| `IN_PROGRESS` | The trip has started and the service is under way. |
+| `COMPLETED` | The trip and the service are finished. |
+| `CANCELLED` | The order was cancelled after it was confirmed, before or during the trip. |
+| `FAILED` | The order failed, for example because a non-cash payment failed. |
 
 order_status have valid transition constraints that will need to be upheld. The state transitions are:
 - pending: can go to confirmed or failed
