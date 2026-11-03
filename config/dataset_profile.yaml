@@ -1,20 +1,31 @@
 seed: 42
 
+# Orders are spread over this period (UTC), and the dataset is a snapshot taken at its end.
+period:
+  start: 2026-05-01
+  end: 2026-11-01
+
 profiles:
   small:
     customers: 1000
     service_orders: 10000
     driver_partners: 500
+    locations: 2000
+    merchant_outlets: 300
 
   medium:
     customers: 10000
     service_orders: 100000
     driver_partners: 5000
+    locations: 20000
+    merchant_outlets: 3000
 
   large:
     customers: 100000
     service_orders: 1000000
     driver_partners: 50000
+    locations: 200000
+    merchant_outlets: 30000
 
 order_distribution:
   mobility: 0.50

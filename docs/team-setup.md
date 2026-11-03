@@ -108,7 +108,7 @@ This is the proposed assignment, not an enforcement mechanism. All members may w
 - Implement 10 read and 10 write queries.
 - Benchmark query performance on a designated reference host and record methodology.
 
-The PostgreSQL schema is partially implemented; data generation and benchmarking remain planned.
+The PostgreSQL schema and data generation are implemented (see [scripts/README.md](../scripts/README.md)); queries and benchmarking remain planned.
 
 ## 5. Troubleshooting
 
