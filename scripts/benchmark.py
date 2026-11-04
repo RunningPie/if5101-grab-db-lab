@@ -210,9 +210,16 @@ def check_database(settings: dict[str, str], profile: str, need_exclusive: bool)
     return version
 
 
+def checkpoint(settings: dict[str, str], database: str) -> None:
+    # Write out pending changes now, so a background checkpoint does not run during the timed runs.
+    # The runs follow back to back without pausing: an idle pause lets the CPU slow down and skews them.
+    run_psql(settings, database, 'CHECKPOINT;\n')
+
+
 def benchmark_reads(settings: dict[str, str], queries: list[Query], runs: int, results: dict) -> None:
     for query in queries:
         # One session per query: a warm-up run that records the plan, then the timed runs.
+        checkpoint(settings, settings['POSTGRES_DB'])
         lines = plan_script([query])
         for run in range(1, runs + 1):
             lines += timed_script([query], run)
@@ -234,6 +241,7 @@ def benchmark_writes(settings: dict[str, str], queries: list[Query], runs: int, 
     try:
         for run in range(runs + 1):
             run_psql(settings, MAINTENANCE_DB, drop + create)
+            checkpoint(settings, copy)
             if run == 0:
                 output = run_psql(settings, copy, '\n'.join(plan_script(queries)) + '\n')
                 parse_output(output, queries, [], results)
@@ -302,6 +310,8 @@ def benchmark(settings: dict[str, str], profile: str, runs: int, only: str | Non
     reads = load_queries(READ_FILE, 'read') if only != 'writes' else []
     writes = load_queries(WRITE_FILE, 'write') if only != 'reads' else []
     version = check_database(settings, profile, need_exclusive=bool(writes))
+    # Vacuum first, so autovacuum does not start on the freshly seeded tables during the runs.
+    run_psql(settings, settings['POSTGRES_DB'], 'VACUUM (ANALYZE);\n')
     started_at = datetime.now(timezone.utc)
     results = {query.name: {'times_ms': [], 'rows': [], 'plans': []} for query in reads + writes}
     print(f"Benchmarking {settings['POSTGRES_DB']} ({profile}) on PostgreSQL {version}: "
