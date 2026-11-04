@@ -14,6 +14,8 @@ This is our contract for what each table looks like, like an API contract but fo
 
 An area where the platform operates. Owner: Nabil.
 
+Every service area must have at least one row in `locations` (total participation). A foreign key cannot enforce this, so deferred constraint triggers check it at `COMMIT`: when a service area is inserted, and when a location is deleted or moved to another area. Insert a new area and its first location in the same transaction.
+
 | Column | Type | Required | Rules | Example |
 | --- | --- | --- | --- | --- |
 | `service_area_id` | `VARCHAR(10)` | yes | Primary key | `SAR0000001` |
@@ -200,7 +202,7 @@ The execution of a service order. Owner: Ishak.
 | --- | --- | --- | --- | --- |
 | `trip_id` | `VARCHAR(10)` | yes | Primary key | `TRP0000001` |
 | `started_at` | `TIMESTAMPTZ` | no | | `2026-10-30 19:40:00+00` |
-| `completed_at` | `TIMESTAMPTZ` | when `COMPLETED` | Must be present when `trip_status` is `COMPLETED` | `2026-10-30 20:05:00+00` |
+| `completed_at` | `TIMESTAMPTZ` | when `COMPLETED` | Must be present when `trip_status` is `COMPLETED`, and must not be earlier than `started_at` | `2026-10-30 20:05:00+00` |
 | `trip_status` | `trip_status` (enum) | yes | `SEARCHING`, `ALLOCATED`, `IN_PROGRESS`, `COMPLETED`, or `CANCELLED`. Default `SEARCHING` | `COMPLETED` |
 | `order_id` | `VARCHAR(10)` | yes | Foreign key reference to `service_orders` | `ORD0000001` |
 | `start_location_id` | `VARCHAR(10)` | yes | Foreign key reference to `locations` (pickup/origin) | `LOC0000001` |
