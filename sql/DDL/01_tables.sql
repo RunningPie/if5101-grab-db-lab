@@ -146,7 +146,9 @@ CREATE TABLE trips (
     CONSTRAINT chk_trips_completed_at CHECK (
         (trip_status = 'COMPLETED' AND completed_at IS NOT NULL) OR
         (trip_status != 'COMPLETED')
-    )
+    ),
+    -- A trip cannot finish before it starts. The check passes while either time is still empty.
+    CONSTRAINT chk_trips_time_order CHECK (completed_at >= started_at)
 );
 
 -- 13. driver_assignments (relationship set assigned & fulfills)
