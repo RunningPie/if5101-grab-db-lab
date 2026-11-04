@@ -1,28 +1,44 @@
--- ============================================================================
--- MILESTONE 4: TRANSACTIONAL WRITE QUERIES (OLTP)
 -- Domain Focus: trips, driver_assignments, vehicles, driver_partners
--- ============================================================================
 
 -- W1: Create New Trip Record upon Order Confirmation
-INSERT INTO trips (
-    trip_id, started_at, completed_at, trip_status, order_id, start_location_id, end_location_id
-) VALUES (
-    'TRP9999001', NULL, NULL, 'SEARCHING', 'ORD0000001', 'LOC0000001', 'LOC0000002'
-);
+-- Membuat record trip baru berstatus SEARCHING untuk order berstatus CONFIRMED yang belum memiliki trip.
+INSERT INTO trips (trip_id, started_at, completed_at, trip_status, order_id, start_location_id, end_location_id)
+SELECT 
+    'TRP9999001',
+    NULL,
+    NULL,
+    'SEARCHING',
+    so.order_id,
+    'LOC0000001',
+    'LOC0000002'
+FROM service_orders so
+WHERE so.order_status = 'CONFIRMED'
+  AND NOT EXISTS (SELECT 1 FROM trips t WHERE t.order_id = so.order_id)
+LIMIT 1;
 
 -- W2: Dispatch Assignment Ping to Nearby Driver
-INSERT INTO driver_assignments (
-    assignment_id, assigned_at, assignment_status, responded_at, ended_at, end_reason, trip_id, vehicle_id
-) VALUES (
-    'ASN9999001', CURRENT_TIMESTAMP, 'PENDING', NULL, NULL, NULL, 'TRP9999001', 'VEH0000001'
-);
+-- Mengalokasikan tawaran trip (assignment) berstatus PENDING ke driver yang sedang aktif.
+INSERT INTO driver_assignments (assignment_id, assigned_at, assignment_status, responded_at, ended_at, end_reason, trip_id, vehicle_id)
+SELECT 
+    'ASN9999001',
+    CURRENT_TIMESTAMP,
+    'PENDING',
+    NULL,
+    NULL,
+    NULL,
+    'TRP9999001',
+    v.vehicle_id
+FROM vehicles v
+WHERE v.driver_partner_id IS NOT NULL
+LIMIT 1;
 
--- W3: Driver Accepts Assignment & Starts Trip (Transaction Block)
--- Transisi bertahap: SEARCHING -> ALLOCATED -> IN_PROGRESS sesuai trigger check_trip_status_transition()
+-- W3: Driver Accepts Assignment & Starts Trip
+-- Mengubah status assignment menjadi ACCEPTED serta memperbarui status trip dari ALLOCATED ke IN_PROGRESS.
 BEGIN;
 
 UPDATE driver_assignments
-SET assignment_status = 'ACCEPTED', responded_at = CURRENT_TIMESTAMP
+SET assignment_status = 'ACCEPTED', 
+    responded_at = CURRENT_TIMESTAMP
 WHERE assignment_id = 'ASN9999001';
 
 UPDATE trips
@@ -30,40 +46,62 @@ SET trip_status = 'ALLOCATED'
 WHERE trip_id = 'TRP9999001';
 
 UPDATE trips
-SET trip_status = 'IN_PROGRESS', started_at = CURRENT_TIMESTAMP
+SET trip_status = 'IN_PROGRESS', 
+    started_at = CURRENT_TIMESTAMP
 WHERE trip_id = 'TRP9999001';
 
 COMMIT;
 
 -- W4: Driver Rejects Assignment / Expiry Handler
--- Menangani penolakan assignment pada trip terpisah (TRP9999002) agar W5 tetap bisa berjalan lancar
-INSERT INTO trips (
-    trip_id, started_at, completed_at, trip_status, order_id, start_location_id, end_location_id
-) VALUES (
-    'TRP9999002', NULL, NULL, 'SEARCHING', 'ORD0000002', 'LOC0000001', 'LOC0000002'
-);
+-- Menangani skenario penolakan tawaran trip oleh driver dengan mencatat end_reason.
+INSERT INTO trips (trip_id, started_at, completed_at, trip_status, order_id, start_location_id, end_location_id)
+SELECT 
+    'TRP9999002',
+    NULL,
+    NULL,
+    'SEARCHING',
+    so.order_id,
+    'LOC0000001',
+    'LOC0000002'
+FROM service_orders so
+WHERE so.order_status = 'CONFIRMED'
+  AND so.order_id <> 'ORD0000001'
+  AND NOT EXISTS (SELECT 1 FROM trips t WHERE t.order_id = so.order_id)
+LIMIT 1;
 
-INSERT INTO driver_assignments (
-    assignment_id, assigned_at, assignment_status, responded_at, ended_at, end_reason, trip_id, vehicle_id
-) VALUES (
-    'ASN9999002', CURRENT_TIMESTAMP, 'PENDING', NULL, NULL, NULL, 'TRP9999002', 'VEH0000002'
-);
+INSERT INTO driver_assignments (assignment_id, assigned_at, assignment_status, responded_at, ended_at, end_reason, trip_id, vehicle_id)
+SELECT 
+    'ASN9999002',
+    CURRENT_TIMESTAMP,
+    'PENDING',
+    NULL,
+    NULL,
+    NULL,
+    'TRP9999002',
+    v.vehicle_id
+FROM vehicles v
+LIMIT 1 OFFSET 1;
 
 UPDATE driver_assignments
-SET assignment_status = 'REJECTED', responded_at = CURRENT_TIMESTAMP, ended_at = CURRENT_TIMESTAMP, end_reason = 'Too far from pickup location'
+SET assignment_status = 'REJECTED', 
+    responded_at = CURRENT_TIMESTAMP, 
+    ended_at = CURRENT_TIMESTAMP, 
+    end_reason = 'Too far from pickup location'
 WHERE assignment_id = 'ASN9999002';
 
--- W5: Complete Trip & Release Driver Availability (Transaction Block)
--- Transisi: IN_PROGRESS -> COMPLETED untuk menyelesaikan perjalanan TRP9999001
+-- W5: Complete Trip & Release Driver Availability
+-- Menyelesaikan trip (COMPLETED) dan mengembalikan status ketersediaan driver menjadi ACTIVE.
 BEGIN;
 
 UPDATE trips
-SET trip_status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
+SET trip_status = 'COMPLETED', 
+    completed_at = CURRENT_TIMESTAMP
 WHERE trip_id = 'TRP9999001';
 
 UPDATE driver_assignments
 SET ended_at = CURRENT_TIMESTAMP
-WHERE trip_id = 'TRP9999001' AND assignment_status = 'ACCEPTED';
+WHERE trip_id = 'TRP9999001' 
+  AND assignment_status = 'ACCEPTED';
 
 UPDATE driver_partners
 SET driver_status = 'ACTIVE'
@@ -71,11 +109,13 @@ WHERE driver_partner_id = (
     SELECT v.driver_partner_id 
     FROM vehicles v 
     JOIN driver_assignments da ON v.vehicle_id = da.vehicle_id 
-    WHERE da.trip_id = 'TRP9999001' AND da.assignment_status = 'ACCEPTED'
+    WHERE da.trip_id = 'TRP9999001' 
+      AND da.assignment_status = 'ACCEPTED'
     LIMIT 1
 );
 
 COMMIT;
+
 
 -- Domain Focus: service_areas, locations, merchant_outlets, payments
 -- ID baru memakai rentang 9999101 ke atas agar tidak bentrok dengan data generator maupun W1-W5.
