@@ -28,6 +28,6 @@ profiles:
     merchant_outlets: 30000
 
 order_distribution:
-  mobility: 0.50
-  food: 0.35
-  delivery: 0.15
+  mobility: 0.32
+  food: 0.32
+  delivery: 0.36
