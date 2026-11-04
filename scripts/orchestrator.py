@@ -1,4 +1,4 @@
-"""Initialize the PostgreSQL schema and coordinate future experiment steps."""
+"""Initialize, seed and benchmark the PostgreSQL database (init, seed, benchmark, run)."""
 
 from __future__ import annotations
 
@@ -29,10 +29,14 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser('init', help='initialize the schema in an empty database')
     seed = commands.add_parser('seed', help='generate synthetic data and load it into the empty schema')
     seed.add_argument('--profile', required=True, choices=('small', 'medium', 'large'))
-    for name in ('benchmark', 'run'):
-        # TO DO: Implement these commands in the future. For now, they are placeholders to avoid confusion.
-        command = commands.add_parser(name, help='planned experiment step; not yet implemented')
+    for name, help_text in (
+        ('benchmark', 'run the DML benchmark on an already seeded database (same as benchmark.py)'),
+        ('run', 'initialize the schema, seed the profile, then benchmark it (needs an empty database)'),
+    ):
+        command = commands.add_parser(name, help=help_text)
         command.add_argument('--profile', required=True, choices=('small', 'medium', 'large'))
+        command.add_argument('--runs', type=int, default=5, help='timed runs per query (default: 5)')
+        command.add_argument('--only', choices=('reads', 'writes'), help='run only one workload')
     return parser
 
 
@@ -96,8 +100,18 @@ def seed_database(settings: dict[str, str], profile: str) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command in ('benchmark', 'run'):
-        print(f"The '{args.command}' command is not implemented yet; no changes were made.", file=sys.stderr)
-        return 1
+        # Imported here because benchmark.py imports this module.
+        from benchmark import benchmark
+        try:
+            settings = load_settings()
+            if args.command == 'run':
+                initialize_schema(settings)
+                seed_database(settings, args.profile)
+            benchmark(settings, args.profile, args.runs, args.only)
+        except (ValueError, OSError, subprocess.CalledProcessError) as exc:
+            print(f"'{args.command}' failed: {exc}", file=sys.stderr)
+            return 1
+        return 0
     if args.command == 'seed':
         try:
             seed_database(load_settings(), args.profile)

@@ -1,12 +1,24 @@
 # Scripts
 
-Run these from the repository root with `uv run`, after `uv sync --locked`.
+Run these from the repository root with `uv run`, after `uv sync --locked`. Every command works on the database named by `POSTGRES_DB` (from `.env`, or set for one command; see [One database per profile](#one-database-per-profile)). The Postgres container must be running.
 
-- `orchestrator.py init` creates the schema from `sql/DDL`.
-- `orchestrator.py seed --profile <name>` generates the profile's data and loads it.
-- Both commands run in one transaction. Each fails without changing anything if the database already has the schema or the data.
-- `orchestrator.py benchmark` and `run` are placeholders. To benchmark, use `benchmark.py` (see [Benchmark](#benchmark)).
-- `generate_data.py` is the data generator that `seed` uses.
+## Quick reference
+
+| Command | What it does | Needs |
+| --- | --- | --- |
+| `uv run python scripts/orchestrator.py` (or `init`) | Creates the schema from `sql/DDL`. | An empty database |
+| `uv run python scripts/orchestrator.py seed --profile <name>` | Generates the profile's data and loads it. | An initialized, empty schema |
+| `uv run python scripts/orchestrator.py benchmark --profile <name>` | Benchmarks the read and write queries. Same as `benchmark.py`. | A seeded database of that profile |
+| `uv run python scripts/orchestrator.py run --profile <name>` | Does `init`, `seed` and `benchmark` in one go. | An empty database |
+| `uv run python scripts/benchmark.py --profile <name>` | Benchmarks the queries in `sql/DML`. | A seeded database of that profile |
+| `uv run python scripts/generate_data.py --profile <name> --output-dir <dir>` | Writes the data as CSV files, without touching any database. | Nothing |
+
+- `<name>` is `small`, `medium` or `large`.
+- `benchmark` and `run` accept `--runs <n>` (timed runs per query, default 5) and `--only reads|writes`.
+- `init` and `seed` run in one transaction. Each fails without changing anything if the database already has the schema or the data.
+- `run` stops at the first failing step, so it fails on a database that is already initialized. Recreate the database first (see below).
+- `generate_data.py` is the generator that `seed` uses. `benchmark.py` is what `orchestrator.py benchmark` calls. Details for each are in the sections below.
+- Run `--help` on any script or subcommand for its options, for example `uv run python scripts/orchestrator.py run --help`.
 
 ## One database per profile
 
@@ -33,6 +45,12 @@ $env:POSTGRES_DB = 'grab_lab_small'
 uv run python scripts/orchestrator.py init
 uv run python scripts/orchestrator.py seed --profile small
 Remove-Item Env:POSTGRES_DB
+```
+
+Or do `init`, `seed` and the benchmark in one command, on a freshly created database:
+
+```bash
+POSTGRES_DB=grab_lab_small uv run python scripts/orchestrator.py run --profile small
 ```
 
 Repeat for `medium` and `large`. To see every database in DBeaver, enable **Show all databases** under **Edit Connection → Main**.
@@ -72,6 +90,7 @@ uv run python scripts/benchmark.py --profile small
 Remove-Item Env:POSTGRES_DB
 ```
 
+- **Equivalent command:** `uv run python scripts/orchestrator.py benchmark --profile small` does the same thing.
 - **Disconnect DBeaver first.** The write benchmark copies the database, and PostgreSQL copies a database only when no one else is connected to it. The script stops early if someone is.
 - **Read queries:** each one runs in its own session. A warm-up run with `EXPLAIN (ANALYZE, BUFFERS)` records its plan, then 5 timed runs follow.
 - **Write queries:** they change data and depend on each other, for example W2 needs W1 and W8 needs W7. So every run, including one warm-up run that records the plans, runs W1–W10 in order on a fresh copy of the database, named `<database>_bench`. The copy is dropped at the end, so the profile's database never changes.

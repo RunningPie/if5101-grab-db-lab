@@ -65,7 +65,7 @@ With PostgreSQL running and `.env` configured, initialize an empty database with
 uv run python scripts/orchestrator.py
 ```
 
-The default command checks the connection and applies `sql/DDL` in a single transaction. It does not generate data or run benchmarks. The schema is not a migration: rerunning initialization on an existing schema will fail without replacing it. The `seed --profile <name>` command loads synthetic data into an initialized schema; see [Synthetic data](#synthetic-data). The `benchmark` and `run` commands are reserved for future implementation and currently make no changes.
+The default command checks the connection and applies `sql/DDL` in a single transaction. It does not generate data or run benchmarks. The schema is not a migration: rerunning initialization on an existing schema will fail without replacing it. The `seed --profile <name>` command loads synthetic data into an initialized schema; see [Synthetic data](#synthetic-data). The `benchmark --profile <name>` command benchmarks a seeded database, and `run --profile <name>` does `init`, `seed` and `benchmark` in one go on an empty database. See [scripts/README.md](scripts/README.md) for a quick reference of every script.
 
 ### Dependency Management
 
