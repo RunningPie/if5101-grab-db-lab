@@ -1,0 +1,179 @@
+{
+  "profile": "medium",
+  "database": "grab_lab_medium_setup",
+  "measured_at": "2026-11-04T13:09:19+00:00",
+  "postgres_version": "17.11 (Debian 17.11-1.pgdg13+2)",
+  "postgres_settings": {
+    "effective_cache_size": "4GB",
+    "maintenance_work_mem": "64MB",
+    "max_connections": "100",
+    "max_wal_size": "1GB",
+    "shared_buffers": "128MB",
+    "work_mem": "4MB"
+  },
+  "host": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "cpu": "Apple M5",
+    "cpu_count": 10,
+    "memory_bytes": 17179869184,
+    "disk_bytes": 994610155520
+  },
+  "docker": {
+    "version": "29.5.3",
+    "os": "Docker Desktop",
+    "kernel": "6.12.76-linuxkit",
+    "cpus": 10,
+    "memory_bytes": 8321515520,
+    "image": "postgres:17",
+    "image_bytes": 160005860
+  },
+  "schema": {
+    "seconds": 0.168,
+    "objects": {
+      "tables": 13,
+      "enum_types": 11,
+      "domains": 1,
+      "primary_keys": 13,
+      "foreign_keys": 14,
+      "unique_constraints": 7,
+      "check_constraints": 13,
+      "indexes": 34,
+      "functions": 7,
+      "triggers": 21
+    }
+  },
+  "seed": {
+    "generate_seconds": 3.945,
+    "load_seconds": 16.625,
+    "script_bytes": 50940426,
+    "generator_peak_rss_bytes": 44892160,
+    "wal_bytes": 205616104,
+    "rows": 602615
+  },
+  "storage": {
+    "database_bytes": 112113331,
+    "tables": [
+      {
+        "table": "driver_assignments",
+        "rows": 161161,
+        "table_bytes": 17858560,
+        "index_bytes": 11812864,
+        "indexes": 4
+      },
+      {
+        "table": "trips",
+        "rows": 97925,
+        "table_bytes": 9994240,
+        "index_bytes": 10387456,
+        "indexes": 5
+      },
+      {
+        "table": "service_orders",
+        "rows": 100000,
+        "table_bytes": 8028160,
+        "index_bytes": 7610368,
+        "indexes": 3
+      },
+      {
+        "table": "payments",
+        "rows": 100000,
+        "table_bytes": 8552448,
+        "index_bytes": 6356992,
+        "indexes": 2
+      },
+      {
+        "table": "locations",
+        "rows": 20000,
+        "table_bytes": 2850816,
+        "index_bytes": 2039808,
+        "indexes": 3
+      },
+      {
+        "table": "delivery_orders",
+        "rows": 35743,
+        "table_bytes": 3702784,
+        "index_bytes": 1138688,
+        "indexes": 1
+      },
+      {
+        "table": "food_orders",
+        "rows": 32062,
+        "table_bytes": 2654208,
+        "index_bytes": 1499136,
+        "indexes": 2
+      },
+      {
+        "table": "mobility_orders",
+        "rows": 32195,
+        "table_bytes": 2129920,
+        "index_bytes": 1032192,
+        "indexes": 1
+      },
+      {
+        "table": "customers",
+        "rows": 10000,
+        "table_bytes": 1343488,
+        "index_bytes": 1294336,
+        "indexes": 3
+      },
+      {
+        "table": "driver_partners",
+        "rows": 5000,
+        "table_bytes": 819200,
+        "index_bytes": 712704,
+        "indexes": 3
+      },
+      {
+        "table": "vehicles",
+        "rows": 5506,
+        "table_bytes": 688128,
+        "index_bytes": 647168,
+        "indexes": 3
+      },
+      {
+        "table": "merchant_outlets",
+        "rows": 3000,
+        "table_bytes": 360448,
+        "index_bytes": 262144,
+        "indexes": 2
+      },
+      {
+        "table": "service_areas",
+        "rows": 23,
+        "table_bytes": 16384,
+        "index_bytes": 32768,
+        "indexes": 2
+      }
+    ]
+  },
+  "container": {
+    "idle": {
+      "samples": 9,
+      "memory_max_bytes": 52633600,
+      "anon_max_bytes": 6733824,
+      "cpu_mean_percent": 5.2,
+      "cpu_max_percent": 17.8
+    },
+    "schema": {
+      "samples": 0,
+      "memory_max_bytes": null,
+      "anon_max_bytes": null,
+      "cpu_mean_percent": null,
+      "cpu_max_percent": null
+    },
+    "generate": {
+      "samples": 11,
+      "memory_max_bytes": 51167232,
+      "anon_max_bytes": 4382720,
+      "cpu_mean_percent": 3.2,
+      "cpu_max_percent": 4.3
+    },
+    "load": {
+      "samples": 51,
+      "memory_max_bytes": 160542720,
+      "anon_max_bytes": 18558976,
+      "cpu_mean_percent": 106.0,
+      "cpu_max_percent": 128.3
+    }
+  }
+}
