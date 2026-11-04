@@ -7,8 +7,6 @@
 *.fdb
 *.fbk
 *.backup
-results/*.csv
-results/*.json
 
 # Python virtual environment
 .venv/

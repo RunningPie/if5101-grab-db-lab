@@ -2,8 +2,21 @@
 
 -- W1: Create New Trip Record upon Order Confirmation
 -- Membuat record trip baru berstatus SEARCHING untuk order berstatus CONFIRMED yang belum memiliki trip.
+-- Data generator tidak punya order seperti itu, sehingga order cash baru ORD9999001 dikonfirmasi lebih
+-- dulu dalam transaksi yang sama, dan INSERT trip memilih order tersebut.
+BEGIN;
+
+INSERT INTO service_orders (order_id, created_at, order_status, total_amount, customer_id)
+VALUES ('ORD9999001', CURRENT_TIMESTAMP, 'CONFIRMED', 15000.00, 'CUS0000001');
+
+INSERT INTO mobility_orders (order_id, ride_type, passenger_count, pickup_notes)
+VALUES ('ORD9999001', 'GrabBike', 1, NULL);
+
+INSERT INTO payments (payment_id, payment_method, payment_status, amount, paid_at, order_id)
+VALUES ('PAY9999001', 'CASH', 'PENDING', 15000.00, NULL, 'ORD9999001');
+
 INSERT INTO trips (trip_id, started_at, completed_at, trip_status, order_id, start_location_id, end_location_id)
-SELECT 
+SELECT
     'TRP9999001',
     NULL,
     NULL,
@@ -15,6 +28,8 @@ FROM service_orders so
 WHERE so.order_status = 'CONFIRMED'
   AND NOT EXISTS (SELECT 1 FROM trips t WHERE t.order_id = so.order_id)
 LIMIT 1;
+
+COMMIT;
 
 -- W2: Dispatch Assignment Ping to Nearby Driver
 -- Mengalokasikan tawaran trip (assignment) berstatus PENDING ke driver yang sedang aktif.
@@ -54,6 +69,20 @@ COMMIT;
 
 -- W4: Driver Rejects Assignment / Expiry Handler
 -- Menangani skenario penolakan tawaran trip oleh driver dengan mencatat end_reason.
+-- Seperti W1, order cash baru ORD9999002 dikonfirmasi lebih dulu agar trip TRP9999002 punya order.
+BEGIN;
+
+INSERT INTO service_orders (order_id, created_at, order_status, total_amount, customer_id)
+VALUES ('ORD9999002', CURRENT_TIMESTAMP, 'CONFIRMED', 15000.00, 'CUS0000001');
+
+INSERT INTO mobility_orders (order_id, ride_type, passenger_count, pickup_notes)
+VALUES ('ORD9999002', 'GrabBike', 1, NULL);
+
+INSERT INTO payments (payment_id, payment_method, payment_status, amount, paid_at, order_id)
+VALUES ('PAY9999002', 'CASH', 'PENDING', 15000.00, NULL, 'ORD9999002');
+
+COMMIT;
+
 INSERT INTO trips (trip_id, started_at, completed_at, trip_status, order_id, start_location_id, end_location_id)
 SELECT 
     'TRP9999002',
@@ -116,43 +145,29 @@ WHERE driver_partner_id = (
 
 COMMIT;
 
-
 -- Domain Focus: service_areas, locations, merchant_outlets, payments
 -- ID baru memakai rentang 9999101 ke atas agar tidak bentrok dengan data generator maupun W1-W5.
 
 -- W6: Onboard a New Service Area with Its Locations and Outlets
--- Mendaftarkan service area baru beserta lokasi dan outlet pertamanya dalam satu statement atomik.
--- Data-modifying CTE berantai (INSERT ... RETURNING) memastikan lokasi hanya dibuat jika area berhasil
--- dibuat, dan outlet hanya dibuat di lokasi yang baru saja dibuat. Format alamat mengikuti generator.
-WITH new_area AS (
-    INSERT INTO service_areas (service_area_id, area_name, city, area_status)
-    VALUES ('SAR9999101', 'Cicendo', 'Bandung', 'ACTIVE')
-    RETURNING service_area_id, area_name, city
-),
-new_locations AS (
-    INSERT INTO locations (location_id, latitude, longitude, address, service_area_id)
-    SELECT
-        v.location_id,
-        v.latitude,
-        v.longitude,
-        v.street || ', ' || na.area_name || ', ' || na.city,
-        na.service_area_id
-    FROM new_area na
-    CROSS JOIN (VALUES
-        ('LOC9999101', -6.905200, 107.596400, 'Jl. Pajajaran No. 12'),
-        ('LOC9999102', -6.911800, 107.601700, 'Jl. Kebon Kawung No. 5'),
-        ('LOC9999103', -6.899600, 107.589300, 'Jl. Pasirkaliki No. 88')
-    ) AS v (location_id, latitude, longitude, street)
-    RETURNING location_id
-)
+-- Mendaftarkan service area baru beserta lokasi dan outlet pertamanya dalam satu transaksi, sehingga
+-- area, lokasi, dan outlet tersimpan bersama atau tidak sama sekali. Format alamat mengikuti generator.
+BEGIN;
+
+INSERT INTO service_areas (service_area_id, area_name, city, area_status)
+VALUES ('SAR9999101', 'Cicendo', 'Bandung', 'ACTIVE');
+
+INSERT INTO locations (location_id, latitude, longitude, address, service_area_id)
+VALUES
+    ('LOC9999101', -6.905200, 107.596400, 'Jl. Pajajaran No. 12, Cicendo, Bandung', 'SAR9999101'),
+    ('LOC9999102', -6.911800, 107.601700, 'Jl. Kebon Kawung No. 5, Cicendo, Bandung', 'SAR9999101'),
+    ('LOC9999103', -6.899600, 107.589300, 'Jl. Pasirkaliki No. 88, Cicendo, Bandung', 'SAR9999101');
+
 INSERT INTO merchant_outlets (merchant_outlet_id, outlet_name, outlet_status, location_id)
-SELECT v.merchant_outlet_id, v.outlet_name, 'OPEN', nl.location_id
-FROM new_locations nl
-JOIN (VALUES
-    ('OUT9999101', 'Warung Bu Sri', 'LOC9999101'),
-    ('OUT9999102', 'Kedai Kopi Pak Dadang', 'LOC9999103')
-) AS v (merchant_outlet_id, outlet_name, location_id) ON v.location_id = nl.location_id
-RETURNING merchant_outlet_id, outlet_name, location_id;
+VALUES
+    ('OUT9999101', 'Warung Bu Sri', 'OPEN', 'LOC9999101'),
+    ('OUT9999102', 'Kedai Kopi Pak Dadang', 'OPEN', 'LOC9999103');
+
+COMMIT;
 
 -- W7: Checkout with Non-Cash Payment Retry
 -- Membuat mobility order beserta payment E_WALLET, menolak pembayaran pertama, lalu retry hingga PAID
@@ -211,140 +226,128 @@ WHERE so.order_id = 'ORD9999101'
 COMMIT;
 
 -- W8: Customer Cancels Before Pickup with Payment Settlement
--- Membatalkan order CONFIRMED yang trip-nya belum dimulai, dalam satu statement atomik: trip
--- SEARCHING/ALLOCATED menjadi CANCELLED, assignment PENDING/ACCEPTED ditutup, order menjadi CANCELLED,
--- lalu payment diselesaikan sesuai aturan tim: non-cash yang sudah PAID menjadi REFUNDED (paid_at
--- tetap) dan cash yang masih PENDING menjadi FAILED. Baris order dikunci (FOR UPDATE), dan order hanya
--- dibatalkan jika trip-nya benar-benar berhasil dibatalkan, sehingga bila driver memulai trip pada saat
--- yang sama tidak ada yang berubah. Dijalankan setelah W7; bila order sudah tidak CONFIRMED,
--- statement ini juga tidak mengubah apa pun.
-WITH target AS (
-    SELECT so.order_id
-    FROM service_orders so
-    WHERE so.order_id = 'ORD9999101'
-      AND so.order_status = 'CONFIRMED'
-      AND NOT EXISTS (
-          SELECT 1
-          FROM trips t
-          WHERE t.order_id = so.order_id
-            AND t.trip_status IN ('IN_PROGRESS', 'COMPLETED')
-      )
-    FOR UPDATE
-),
-cancelled_trips AS (
-    UPDATE trips t
-    SET trip_status = 'CANCELLED'
-    FROM target
-    WHERE t.order_id = target.order_id
-      AND t.trip_status IN ('SEARCHING', 'ALLOCATED')
-    RETURNING t.trip_id
-),
-cancelled_assignments AS (
-    UPDATE driver_assignments da
-    SET assignment_status = 'CANCELLED',
-        ended_at = CURRENT_TIMESTAMP,
-        end_reason = 'Cancelled by customer'
-    FROM cancelled_trips ct
-    WHERE da.trip_id = ct.trip_id
-      AND da.assignment_status IN ('PENDING', 'ACCEPTED')
-    RETURNING da.assignment_id
-),
-cancelled_order AS (
-    UPDATE service_orders so
-    SET order_status = 'CANCELLED'
-    FROM target
-    WHERE so.order_id = target.order_id
-      AND EXISTS (SELECT 1 FROM cancelled_trips)
-    RETURNING so.order_id
-)
-UPDATE payments p
-SET payment_status = CASE p.payment_status
-        WHEN 'PAID' THEN 'REFUNDED'::payment_status
-        ELSE 'FAILED'::payment_status
-    END
-FROM cancelled_order co
-WHERE p.order_id = co.order_id
-  AND p.payment_status IN ('PAID', 'PENDING')
-RETURNING p.payment_id, p.order_id, p.payment_method, p.payment_status, p.paid_at;
+-- Customer membatalkan order yang masih CONFIRMED, artinya trip-nya masih SEARCHING atau ALLOCATED dan
+-- belum dijemput. Dalam satu transaksi: order menjadi CANCELLED, trip dan assignment-nya dibatalkan,
+-- lalu payment diselesaikan sesuai aturan tim: yang sudah PAID (non-cash) di-refund dengan paid_at
+-- tetap, dan yang masih PENDING (cash) menjadi FAILED. Langkah setelah UPDATE pertama hanya mengubah
+-- data bila order benar-benar dibatalkan, sehingga order yang sudah IN_PROGRESS tidak berubah.
+-- Dijalankan setelah W7.
+BEGIN;
 
--- W9: Merchant Incident: Close an Outlet and Refund Its Completed Orders
--- Menangani insiden keamanan pangan di satu outlet: outlet yang masih OPEN ditutup sementara (CLOSED),
--- dan seluruh payment non-cash yang PAID dari food order COMPLETED di outlet tersebut dalam periode
--- insiden di-refund (PAID -> REFUNDED, paid_at tidak diubah), walaupun outlet sudah tidak OPEN.
--- Payment cash tidak di-refund karena mengikuti data dan aturan tim, refund hanya terjadi pada
--- pembayaran non-cash. Order yang masih berjalan tidak termasuk; batalkan lewat alur seperti W8.
--- Parameter dikumpulkan di CTE params.
-WITH params AS (
-    SELECT
-        'OUT0000010'::entity_id AS outlet_id,
-        TIMESTAMPTZ '2026-10-01 00:00:00+00' AS incident_from,
-        TIMESTAMPTZ '2026-11-01 00:00:00+00' AS incident_to
-),
-closed_outlet AS (
-    UPDATE merchant_outlets mo
-    SET outlet_status = 'CLOSED'
-    FROM params
-    WHERE mo.merchant_outlet_id = params.outlet_id
-      AND mo.outlet_status = 'OPEN'
-    RETURNING mo.merchant_outlet_id
-)
+UPDATE service_orders
+SET order_status = 'CANCELLED'
+WHERE order_id = 'ORD9999101'
+  AND order_status = 'CONFIRMED';
+
+UPDATE trips t
+SET trip_status = 'CANCELLED'
+FROM service_orders so
+WHERE so.order_id = t.order_id
+  AND so.order_id = 'ORD9999101'
+  AND so.order_status = 'CANCELLED'
+  AND t.trip_status IN ('SEARCHING', 'ALLOCATED');
+
+UPDATE driver_assignments da
+SET assignment_status = 'CANCELLED',
+    ended_at = CURRENT_TIMESTAMP,
+    end_reason = 'Cancelled by customer'
+FROM trips t
+WHERE t.trip_id = da.trip_id
+  AND t.order_id = 'ORD9999101'
+  AND t.trip_status = 'CANCELLED'
+  AND da.assignment_status IN ('PENDING', 'ACCEPTED');
+
 UPDATE payments p
 SET payment_status = 'REFUNDED'
-FROM params
-JOIN food_orders f ON f.merchant_outlet_id = params.outlet_id
-JOIN service_orders so ON so.order_id = f.order_id
-WHERE p.order_id = f.order_id
-  AND so.order_status = 'COMPLETED'
-  AND so.created_at >= params.incident_from
-  AND so.created_at < params.incident_to
-  AND p.payment_status = 'PAID'
-  AND p.payment_method <> 'CASH'
-RETURNING p.payment_id, p.order_id, p.payment_method, p.amount, p.paid_at;
+FROM service_orders so
+WHERE so.order_id = p.order_id
+  AND so.order_id = 'ORD9999101'
+  AND so.order_status = 'CANCELLED'
+  AND p.payment_status = 'PAID';
+
+UPDATE payments p
+SET payment_status = 'FAILED'
+FROM service_orders so
+WHERE so.order_id = p.order_id
+  AND so.order_id = 'ORD9999101'
+  AND so.order_status = 'CANCELLED'
+  AND p.payment_status = 'PENDING';
+
+COMMIT;
+
+-- W9: Complete a Cash Ride and Collect the Payment (Transactional Query)
+-- Query transaksional: driver menyelesaikan ride tunai dan menerima uang dari customer. Trip, order, dan
+-- payment harus berubah bersama, sehingga ketiganya diubah dalam satu transaksi: trip dan order menjadi
+-- COMPLETED, dan payment cash yang PENDING menjadi PAID. Jika salah satu UPDATE gagal, misalnya ditolak
+-- trigger transisi status karena order sudah dibatalkan, seluruh transaksi batal sehingga tidak ada ride
+-- yang tercatat selesai tanpa pembayaran. Transaksi pertama menyiapkan ride tunai yang sedang berjalan di
+-- lokasi dari W6, karena status order hasil generator berbeda di setiap profil.
+BEGIN;
+
+INSERT INTO service_orders (order_id, created_at, order_status, total_amount, customer_id)
+VALUES ('ORD9999102', CURRENT_TIMESTAMP - INTERVAL '30 minutes', 'IN_PROGRESS', 18000.00, 'CUS0000001');
+
+INSERT INTO mobility_orders (order_id, ride_type, passenger_count, pickup_notes)
+VALUES ('ORD9999102', 'GrabBike', 1, NULL);
+
+INSERT INTO payments (payment_id, payment_method, payment_status, amount, paid_at, order_id)
+VALUES ('PAY9999102', 'CASH', 'PENDING', 18000.00, NULL, 'ORD9999102');
+
+INSERT INTO trips (trip_id, started_at, completed_at, trip_status, order_id, start_location_id, end_location_id)
+VALUES ('TRP9999102', CURRENT_TIMESTAMP - INTERVAL '20 minutes', NULL, 'IN_PROGRESS', 'ORD9999102',
+        'LOC9999102', 'LOC9999103');
+
+COMMIT;
+
+-- Ride selesai: trip, order, dan payment diperbarui bersama dalam satu transaksi.
+BEGIN;
+
+UPDATE trips
+SET trip_status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
+WHERE trip_id = 'TRP9999102';
+
+UPDATE service_orders
+SET order_status = 'COMPLETED'
+WHERE order_id = 'ORD9999102';
+
+UPDATE payments
+SET payment_status = 'PAID', paid_at = CURRENT_TIMESTAMP
+WHERE order_id = 'ORD9999102'
+  AND payment_method = 'CASH';
+
+COMMIT;
 
 -- W10: Deactivate a Service Area and Delist Its Outlets
--- Menonaktifkan service area (dicari lewat kunci unik area_name + city), lalu menghitung ulang status
--- setiap outlet di seluruh lokasinya: outlet tanpa food order berjalan menjadi INACTIVE (tidak lagi
--- terdaftar), sedangkan outlet yang masih punya order PENDING, CONFIRMED, atau IN_PROGRESS menjadi
--- CLOSED (berhenti menerima order baru sambil menyelesaikan order yang ada). Karena status outlet
--- selalu dihitung dari order yang berjalan, statement ini aman dijalankan ulang: eksekusi berikutnya
--- mengubah outlet CLOSED menjadi INACTIVE setelah order-nya selesai, dan merapikan outlet yang
--- terlewat, misalnya karena order masuk bersamaan dengan eksekusi sebelumnya.
-WITH params AS (
-    SELECT 'Mergangsan'::VARCHAR(100) AS area_name, 'Yogyakarta'::VARCHAR(100) AS city
-),
-target_area AS (
-    SELECT sa.service_area_id
-    FROM service_areas sa
-    JOIN params ON params.area_name = sa.area_name AND params.city = sa.city
-),
-deactivated_area AS (
-    UPDATE service_areas sa
-    SET area_status = 'INACTIVE'
-    FROM target_area ta
-    WHERE sa.service_area_id = ta.service_area_id
-      AND sa.area_status = 'ACTIVE'
-    RETURNING sa.service_area_id
-),
-outlet_changes AS (
-    SELECT
-        mo.merchant_outlet_id,
-        CASE
-            WHEN EXISTS (
-                SELECT 1
-                FROM food_orders f
-                JOIN service_orders so ON so.order_id = f.order_id
-                WHERE f.merchant_outlet_id = mo.merchant_outlet_id
-                  AND so.order_status IN ('PENDING', 'CONFIRMED', 'IN_PROGRESS')
-            ) THEN 'CLOSED'::outlet_status
-            ELSE 'INACTIVE'::outlet_status
-        END AS new_status
-    FROM target_area ta
-    JOIN locations l ON l.service_area_id = ta.service_area_id
-    JOIN merchant_outlets mo ON mo.location_id = l.location_id
-)
+-- Menonaktifkan service area Cicendo (Bandung) yang dibuat di W6, misalnya karena uji coba layanan di
+-- area tersebut dihentikan, beserta outlet di seluruh lokasinya. Outlet yang tidak punya food order
+-- berjalan (PENDING, CONFIRMED, atau IN_PROGRESS) langsung menjadi INACTIVE (tidak lagi terdaftar).
+-- Outlet yang masih OPEN setelah itu pasti masih punya order berjalan, sehingga hanya ditutup (CLOSED)
+-- agar order-nya tetap bisa diselesaikan. Dijalankan paling akhir, setelah ride di area ini (W7-W9).
+BEGIN;
+
+UPDATE service_areas
+SET area_status = 'INACTIVE'
+WHERE service_area_id = 'SAR9999101'
+  AND area_status = 'ACTIVE';
+
 UPDATE merchant_outlets mo
-SET outlet_status = oc.new_status
-FROM outlet_changes oc
-WHERE mo.merchant_outlet_id = oc.merchant_outlet_id
-  AND mo.outlet_status <> oc.new_status
-RETURNING mo.merchant_outlet_id, mo.outlet_name, mo.outlet_status;
+SET outlet_status = 'INACTIVE'
+FROM locations l
+WHERE mo.location_id = l.location_id
+  AND l.service_area_id = 'SAR9999101'
+  AND mo.outlet_status <> 'INACTIVE'
+  AND mo.merchant_outlet_id NOT IN (
+      SELECT f.merchant_outlet_id
+      FROM food_orders f
+      JOIN service_orders so ON so.order_id = f.order_id
+      WHERE so.order_status IN ('PENDING', 'CONFIRMED', 'IN_PROGRESS')
+  );
+
+UPDATE merchant_outlets mo
+SET outlet_status = 'CLOSED'
+FROM locations l
+WHERE mo.location_id = l.location_id
+  AND l.service_area_id = 'SAR9999101'
+  AND mo.outlet_status = 'OPEN';
+
+COMMIT;
