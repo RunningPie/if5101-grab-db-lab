@@ -78,4 +78,4 @@ Remove-Item Env:POSTGRES_DB
 - **Measurements:** a query's time is the sum of its statements' psql `\timing`, including `BEGIN` and `COMMIT`. Rows are the rows a read returns, or the rows a write's statements change.
 - **Options:** `--runs <n>` changes the number of timed runs. `--only reads` or `--only writes` runs one workload, and `--only reads` doesn't need DBeaver disconnected.
 - **Checks:** the script stops if the database doesn't have the profile's number of service orders, so results are never labelled with the wrong profile.
-- **Results:** `results/<profile>_<timestamp>.csv` has one row per timed run. The `.json` file has the summary, the plans, the PostgreSQL version and the host. Git ignores both.
+- **Results:** `results/<profile>_<timestamp>.csv` has one row per timed run. The `.json` file has the summary, the plans, the PostgreSQL version and the host. Both are committed to the repository.
