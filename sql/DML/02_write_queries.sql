@@ -275,46 +275,7 @@ WHERE so.order_id = p.order_id
 
 COMMIT;
 
--- W9: Deactivate a Service Area and Delist Its Outlets
--- Menonaktifkan service area Mergangsan (Yogyakarta) beserta outlet di seluruh lokasinya. Outlet yang
--- tidak punya food order berjalan (PENDING, CONFIRMED, atau IN_PROGRESS) langsung menjadi INACTIVE
--- (tidak lagi terdaftar). Outlet yang masih OPEN setelah itu pasti masih punya order berjalan, sehingga
--- hanya ditutup (CLOSED) agar order-nya tetap bisa diselesaikan.
-BEGIN;
-
-UPDATE service_areas
-SET area_status = 'INACTIVE'
-WHERE area_name = 'Mergangsan'
-  AND city = 'Yogyakarta'
-  AND area_status = 'ACTIVE';
-
-UPDATE merchant_outlets mo
-SET outlet_status = 'INACTIVE'
-FROM locations l
-JOIN service_areas sa ON sa.service_area_id = l.service_area_id
-WHERE mo.location_id = l.location_id
-  AND sa.area_name = 'Mergangsan'
-  AND sa.city = 'Yogyakarta'
-  AND mo.outlet_status <> 'INACTIVE'
-  AND mo.merchant_outlet_id NOT IN (
-      SELECT f.merchant_outlet_id
-      FROM food_orders f
-      JOIN service_orders so ON so.order_id = f.order_id
-      WHERE so.order_status IN ('PENDING', 'CONFIRMED', 'IN_PROGRESS')
-  );
-
-UPDATE merchant_outlets mo
-SET outlet_status = 'CLOSED'
-FROM locations l
-JOIN service_areas sa ON sa.service_area_id = l.service_area_id
-WHERE mo.location_id = l.location_id
-  AND sa.area_name = 'Mergangsan'
-  AND sa.city = 'Yogyakarta'
-  AND mo.outlet_status = 'OPEN';
-
-COMMIT;
-
--- W10: Complete a Cash Ride and Collect the Payment (Transactional Query)
+-- W9: Complete a Cash Ride and Collect the Payment (Transactional Query)
 -- Query transaksional: driver menyelesaikan ride tunai dan menerima uang dari customer. Trip, order, dan
 -- payment harus berubah bersama, sehingga ketiganya diubah dalam satu transaksi: trip dan order menjadi
 -- COMPLETED, dan payment cash yang PENDING menjadi PAID. Jika salah satu UPDATE gagal, misalnya ditolak
@@ -353,5 +314,40 @@ UPDATE payments
 SET payment_status = 'PAID', paid_at = CURRENT_TIMESTAMP
 WHERE order_id = 'ORD9999102'
   AND payment_method = 'CASH';
+
+COMMIT;
+
+-- W10: Deactivate a Service Area and Delist Its Outlets
+-- Menonaktifkan service area Cicendo (Bandung) yang dibuat di W6, misalnya karena uji coba layanan di
+-- area tersebut dihentikan, beserta outlet di seluruh lokasinya. Outlet yang tidak punya food order
+-- berjalan (PENDING, CONFIRMED, atau IN_PROGRESS) langsung menjadi INACTIVE (tidak lagi terdaftar).
+-- Outlet yang masih OPEN setelah itu pasti masih punya order berjalan, sehingga hanya ditutup (CLOSED)
+-- agar order-nya tetap bisa diselesaikan. Dijalankan paling akhir, setelah ride di area ini (W7-W9).
+BEGIN;
+
+UPDATE service_areas
+SET area_status = 'INACTIVE'
+WHERE service_area_id = 'SAR9999101'
+  AND area_status = 'ACTIVE';
+
+UPDATE merchant_outlets mo
+SET outlet_status = 'INACTIVE'
+FROM locations l
+WHERE mo.location_id = l.location_id
+  AND l.service_area_id = 'SAR9999101'
+  AND mo.outlet_status <> 'INACTIVE'
+  AND mo.merchant_outlet_id NOT IN (
+      SELECT f.merchant_outlet_id
+      FROM food_orders f
+      JOIN service_orders so ON so.order_id = f.order_id
+      WHERE so.order_status IN ('PENDING', 'CONFIRMED', 'IN_PROGRESS')
+  );
+
+UPDATE merchant_outlets mo
+SET outlet_status = 'CLOSED'
+FROM locations l
+WHERE mo.location_id = l.location_id
+  AND l.service_area_id = 'SAR9999101'
+  AND mo.outlet_status = 'OPEN';
 
 COMMIT;
