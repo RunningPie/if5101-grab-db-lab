@@ -101,6 +101,28 @@ CREATE CONSTRAINT TRIGGER trg_delivery_specialization AFTER INSERT OR UPDATE OR 
 CREATE CONSTRAINT TRIGGER trg_mobility_specialization AFTER INSERT OR UPDATE OR DELETE ON mobility_orders
     DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_order_specialization();
 
+-- Total participation of service_areas in "contains": every service area must have at least one location.
+-- A foreign key only constrains locations, so this is checked at COMMIT. That lets a service area and its
+-- first locations be inserted in the same transaction. Locations can only be inserted for an existing area,
+-- so the check runs when an area is created and when a location leaves its area (delete or move).
+CREATE FUNCTION check_service_area_has_location() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE target_id entity_id;
+BEGIN
+    target_id := CASE WHEN TG_TABLE_NAME = 'service_areas' THEN NEW.service_area_id ELSE OLD.service_area_id END;
+    -- A deleted service area does not need a location.
+    IF NOT EXISTS (SELECT 1 FROM service_areas WHERE service_area_id = target_id) THEN RETURN NULL; END IF;
+    IF NOT EXISTS (SELECT 1 FROM locations WHERE service_area_id = target_id) THEN
+        RAISE EXCEPTION 'Service area % must have at least one location', target_id
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+CREATE CONSTRAINT TRIGGER trg_service_area_locations AFTER INSERT ON service_areas
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_service_area_has_location();
+CREATE CONSTRAINT TRIGGER trg_location_area_locations AFTER DELETE OR UPDATE OF service_area_id ON locations
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_service_area_has_location();
+
 -- Identifiers are assigned once by the generator and do not change.
 CREATE FUNCTION prevent_identifier_change() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
