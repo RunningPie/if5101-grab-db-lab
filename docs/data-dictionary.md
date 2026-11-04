@@ -76,8 +76,8 @@ Representing user entities who can create service orders. Owner: Dama.
 | --- | --- | --- | --- | --- |
 | `customer_id` | `VARCHAR(10)` | yes | Primary key | `CUS0000001` |
 | `full_name` | `VARCHAR(100)` | yes | | `Nama Lengkap` |
-| `phone_number` | `VARCHAR(16)` | no | must be valid phone number | `+621234123412345` |
-| `email` | `VARCHAR(100)` | no | must be valid email | `john.doe@example.com` |
+| `phone_number` | `VARCHAR(16)` | no | must be unique and valid phone number | `+621234123412345` |
+| `email` | `VARCHAR(100)` | no | must be unique and valid email | `john.doe@example.com` |
 
 name is stored as full name, not split into first and last name following what we actually see in Grab's app.
 
@@ -163,10 +163,6 @@ A specialization subtable from service_orders that contain info specifically for
 | `pickup_notes` | `VARCHAR(100)` | no | - | `I'll be waiting by the gate` |
 
 pickup and dropoff points will be handled in different table.
-
-## Not written yet
-
-Owners, please add these using the same table format.
 
 ## driver_partners
 
