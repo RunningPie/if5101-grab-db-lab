@@ -1,5 +1,3 @@
--- Domain Focus: trips, driver_assignments, vehicles, driver_partners
-
 -- W1: Create New Trip Record upon Order Confirmation
 -- Membuat record trip baru berstatus SEARCHING untuk order berstatus CONFIRMED yang belum memiliki trip.
 -- Data generator tidak punya order seperti itu, sehingga order cash baru ORD9999001 dikonfirmasi lebih
@@ -145,7 +143,6 @@ WHERE driver_partner_id = (
 
 COMMIT;
 
--- Domain Focus: service_areas, locations, merchant_outlets, payments
 -- ID baru memakai rentang 9999101 ke atas agar tidak bentrok dengan data generator maupun W1-W5.
 
 -- W6: Onboard a New Service Area with Its Locations and Outlets

@@ -1,5 +1,3 @@
--- Domain Focus: trips, driver_assignments, vehicles, driver_partners
-
 -- R1: Driver Performance & Acceptance Rate Analysis
 -- Menganalisis tingkat penerimaan tawaran trip (Acceptance Rate) dari semesta keputusan aktif driver (ACCEPTED dan REJECTED).
 SELECT 
@@ -87,8 +85,6 @@ JOIN locations l ON sa.service_area_id = l.service_area_id
 JOIN trips t ON l.location_id = t.start_location_id
 GROUP BY sa.service_area_id, sa.area_name, sa.city
 ORDER BY total_trips DESC;
-
--- Domain Focus: service_areas, locations, merchant_outlets, payments
 
 -- R6: Revenue and Refunds per Service Area
 -- Menghitung pendapatan bersih (payment PAID), nilai refund, dan tingkat refund per service area.
