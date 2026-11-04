@@ -2,8 +2,21 @@
 
 -- W1: Create New Trip Record upon Order Confirmation
 -- Membuat record trip baru berstatus SEARCHING untuk order berstatus CONFIRMED yang belum memiliki trip.
+-- Data generator tidak punya order seperti itu, sehingga order cash baru ORD9999001 dikonfirmasi lebih
+-- dulu dalam transaksi yang sama, dan INSERT trip memilih order tersebut.
+BEGIN;
+
+INSERT INTO service_orders (order_id, created_at, order_status, total_amount, customer_id)
+VALUES ('ORD9999001', CURRENT_TIMESTAMP, 'CONFIRMED', 15000.00, 'CUS0000001');
+
+INSERT INTO mobility_orders (order_id, ride_type, passenger_count, pickup_notes)
+VALUES ('ORD9999001', 'GrabBike', 1, NULL);
+
+INSERT INTO payments (payment_id, payment_method, payment_status, amount, paid_at, order_id)
+VALUES ('PAY9999001', 'CASH', 'PENDING', 15000.00, NULL, 'ORD9999001');
+
 INSERT INTO trips (trip_id, started_at, completed_at, trip_status, order_id, start_location_id, end_location_id)
-SELECT 
+SELECT
     'TRP9999001',
     NULL,
     NULL,
@@ -15,6 +28,8 @@ FROM service_orders so
 WHERE so.order_status = 'CONFIRMED'
   AND NOT EXISTS (SELECT 1 FROM trips t WHERE t.order_id = so.order_id)
 LIMIT 1;
+
+COMMIT;
 
 -- W2: Dispatch Assignment Ping to Nearby Driver
 -- Mengalokasikan tawaran trip (assignment) berstatus PENDING ke driver yang sedang aktif.
@@ -54,6 +69,20 @@ COMMIT;
 
 -- W4: Driver Rejects Assignment / Expiry Handler
 -- Menangani skenario penolakan tawaran trip oleh driver dengan mencatat end_reason.
+-- Seperti W1, order cash baru ORD9999002 dikonfirmasi lebih dulu agar trip TRP9999002 punya order.
+BEGIN;
+
+INSERT INTO service_orders (order_id, created_at, order_status, total_amount, customer_id)
+VALUES ('ORD9999002', CURRENT_TIMESTAMP, 'CONFIRMED', 15000.00, 'CUS0000001');
+
+INSERT INTO mobility_orders (order_id, ride_type, passenger_count, pickup_notes)
+VALUES ('ORD9999002', 'GrabBike', 1, NULL);
+
+INSERT INTO payments (payment_id, payment_method, payment_status, amount, paid_at, order_id)
+VALUES ('PAY9999002', 'CASH', 'PENDING', 15000.00, NULL, 'ORD9999002');
+
+COMMIT;
+
 INSERT INTO trips (trip_id, started_at, completed_at, trip_status, order_id, start_location_id, end_location_id)
 SELECT 
     'TRP9999002',
