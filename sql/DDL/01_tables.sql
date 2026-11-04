@@ -62,6 +62,8 @@ CREATE TABLE customers (
     full_name    VARCHAR(100) NOT NULL,
     phone_number VARCHAR(16),
     email        VARCHAR(100),
+    CONSTRAINT uq_customers_phone UNIQUE (phone_number),
+    CONSTRAINT uq_customers_email UNIQUE (email),
     CONSTRAINT chk_customers_phone CHECK (phone_number ~ '^\+?[0-9]{7,15}$'),
     CONSTRAINT chk_customers_email CHECK (email ~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$')
 );
